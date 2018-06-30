@@ -1359,6 +1359,7 @@ for flyID=1:cond{1}.numFlies
 
             subplot(3,8,ROINow+8*(trialID-1));
             imagesc(vFCents,headingCents,flipud(squeeze(flyMap{flyID}.(trialName){trialID}.mapMatrixMean(ROINow,:,:))));
+            caxis([0 1.5]);
             title(strcat('ROI #',num2str(ROINow)));
             if ROINow == 1
                 tLab = text(-1.5,-1.1*pi,strcat('trial #',num2str(trialID)));
@@ -1527,6 +1528,8 @@ for flyID=1:cond{condID}.numFlies
 
             % Extract the appropriate data
             FBDat =  cond{condID}.allFlyData{flyID}.(trialName){trialID}.ROIaveMax-1;
+            tAll = cond{1}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetRotMatch(:,1);
+            tAll = tAll - tAll(1);
             forPos = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetForMatch;
             latPos = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetLatMatch;
             vF = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.vF;
@@ -1557,7 +1560,7 @@ for flyID=1:cond{condID}.numFlies
 
             figure(offsetCodingAll);
             % Plot the trajectories colored by the offset
-            subplot(4,6,[1+flyID+12*(trialType-1) 7+flyID+12*(trialType-1)]);
+            subplot(4,6,[1+flyID+12*(trialType-1)]);
             hold on;
             scatter(forPos,latPos,3,pltColors,'filled');
             rectangle('Position',[-75 -75 150 150],'Curvature',1,'EdgeColor','k');
@@ -1583,10 +1586,12 @@ for flyID=1:cond{condID}.numFlies
             if trialType == 2
                 figure(offsetCodingClutter);
                 % Plot the trajectories colored by the offset
-                subplot(floor(sqrt(cond{condID}.numFlies)),ceil(sqrt(cond{condID}.numFlies)),flyID);
+                subplot(ceil(sqrt(cond{condID}.numFlies)),ceil(sqrt(cond{condID}.numFlies)),flyID);
                 hold on;
                 scatter(forPos,latPos,3,pltColors,'filled');
                 scatter(-5,0,100,'k','p');
+                xlim([-45 45]);
+                ylim([-45 45]);
                 axis equal;
                 axis off;
             end
@@ -1594,18 +1599,219 @@ for flyID=1:cond{condID}.numFlies
     end
 end
 figure(offsetCodingAll);
-subplot(4,6,[7 13]);
-rectangle('Position',[-1 -1 2 2],'Curvature',1,'EdgeColor','k');
-scatter(cos(offsetCents),sin(offsetCents),100,offsetColors,'filled');
-title('offset');
-axis equal;
-axis off;
+for plt = 1:2
+    if plt == 1
+        subplot(4,6,1);
+    else
+        subplot(4,6,13);
+    end
+    rectangle('Position',[-1 -1 2 2],'Curvature',1,'EdgeColor','k');
+    scatter(cos(offsetCents),sin(offsetCents),100,offsetColors,'filled');
+    title('offset');
+    axis equal;
+    axis off;
+end
     
 set(offsetCodingAll,'PaperPositionMode','manual','PaperOrientation','landscape','PaperUnits','inches','PaperPosition',[0 0 11 8.5]);
 print(offsetCodingAll,'C:\Users\turnerevansd\Documents\RawAnalysis\37G12\Figures\OffsetCodedTrajAll','-dpdf');
 
 set(offsetCodingClutter,'PaperPositionMode','manual','PaperOrientation','landscape','PaperUnits','inches','PaperPosition',[0 0 11 8.5]);
 print(offsetCodingClutter,'C:\Users\turnerevansd\Documents\RawAnalysis\37G12\Figures\OffsetCodedTrajClutter','-dpdf');
+
+%% Plot the trajectories color coded by the curvature - clutter
+
+condID = 1;
+
+tCurve = 5;
+
+curvThresh = 0.5;
+
+behaviorLabel = figure('units','normalized','outerposition',[0 0 1 1]);
+
+for flyID=1:cond{condID}.numFlies    
+        
+    trialName = 'MSClutterWGround';
+    for trialID = 1:length(cond{condID}.allFlyData{flyID}.(trialName))
+
+        % Extract the appropriate data
+        FBDat =  cond{condID}.allFlyData{flyID}.(trialName){trialID}.ROIaveMax-1;
+        tAll = cond{1}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetRotMatch(:,1);
+        tAll = tAll - tAll(1);
+        numPts = round(tCurve./mean(diff(tAll)));
+        forPos = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetForMatch;
+        latPos = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetLatMatch;
+        heading = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetRotMatch(:,2);
+
+        % Find how well
+        curvVals = zeros(length(forPos)-numPts+1,1);
+        Vertices = zeros(numPts,2);
+        for tPt = 1:length(curvVals)
+            x = forPos(tPt:tPt+numPts-1);
+            y = latPos(tPt:tPt+numPts-1);
+            [xc, yx, R, a] = circfit(x,y);
+            curvVals(tPt) = 1/R;
+        end
+        curvVals(find(curvVals>curvThresh)) == curvThresh;
+        curvVals = curvVals./curvThresh;
+        
+        curvCols = zeros(length(curvVals),3);
+        curvCols(:,1) = curvVals; 
+        
+        % Plot the trajectories colored by the offset
+        subplot(ceil(sqrt(cond{condID}.numFlies)),ceil(sqrt(cond{condID}.numFlies)),flyID);
+        hold on;
+        scatter(forPos(ceil(numPts/2):end-ceil(numPts/2)),latPos(ceil(numPts/2):end-ceil(numPts/2)),3,curvCols,'filled');
+        scatter(-5,0,100,'k','p');
+        xlim([-45 45]);
+        ylim([-45 45]);
+        axis equal;
+        axis off;
+    end
+end
+
+%% Plot offset distributions - stripe and clutter cases
+
+condID = 1;
+
+offsetEdges = linspace(-pi,pi,17);
+offsetCents = offsetEdges(1:end-1);
+offsetCents = offsetCents+0.5*mean(diff(offsetCents));
+
+offsetHist = figure('units','normalized','outerposition',[0 0 1 1]);
+
+PVAThresh = 0.2;
+
+flyCols = rand(cond{condID}.numFlies,3);
+
+for flyID=1:cond{condID}.numFlies    
+
+    for trialType = 1:2
+        if trialType == 1
+            trialName = 'StripeWGround';
+        elseif trialType == 2
+            trialName = 'MSClutterWGround';
+        end
+        for trialID = 1:length(cond{condID}.allFlyData{flyID}.(trialName))
+
+            % Extract the appropriate data
+            FBDat =  cond{condID}.allFlyData{flyID}.(trialName){trialID}.ROIaveMax-1;
+            tAll = cond{1}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetRotMatch(:,1);
+            tAll = tAll - tAll(1);
+            heading = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetRotMatch(:,2);
+
+            % Find the PVA
+            num_ROIs = size(FBDat,1);
+            angsraw = (1:num_ROIs)*2*pi/num_ROIs-pi;
+            angsraw = angsraw';
+            clear PVA;
+            clear PVAStren;
+            for ts = 1:size(FBDat,2)
+                PVA(ts) = circ_mean(angsraw,...
+                    squeeze(FBDat(:,ts)));
+                PVAStren(ts) = circ_r(angsraw,...
+                    squeeze(FBDat(:,ts)));
+            end
+
+            offset = mod(PVA'-heading,2*pi)-pi;
+            offset(find(PVAStren<PVAThresh)) = [];
+            offsetMean = circ_mean(offset);
+            offsetStren = circ_r(offset);
+            
+            % Plot the trajectories colored by the offset
+            subplot(4,6,flyID+12*(trialType-1));
+            hold on;
+            h = histogram(offset,offsetEdges);
+            h.FaceColor = flyCols(flyID,:);
+            h.EdgeColor = 'none';
+            h.FaceAlpha = 0.33;
+            xlim([-pi pi]);
+            ylim([0 400]);
+            if flyID == 1
+                title(trialName);
+            end
+            xlabel('offset (rad)');
+            ylabel('counts');
+            
+            subplot(4,6,12+12*(trialType-1));
+            hold on;
+            if flyID == 1
+                rectangle('Position',[-1 -1 2 2],'Curvature',1,'EdgeColor','k');
+            end
+            scatter(offsetStren*sin(offsetMean),offsetStren*cos(offsetMean),50,flyCols(flyID,:),'filled');
+            line([0 offsetStren*sin(offsetMean)],[0 offsetStren*cos(offsetMean)],'Color',flyCols(flyID,:));
+            axis equal;
+            axis off;
+            
+        end
+    end
+end
+
+%% Plot the clutter trajectories color coded by the offset error
+
+condID = 1;
+
+numBins = 33;
+errorMax = 0.5;
+offsetEdges = linspace(0,errorMax,numBins);
+
+PVAStrenThresh = 0.25;
+
+offsetCodingClutter = figure('units','normalized','outerposition',[0 0 1 1]);
+
+for flyID=1:cond{condID}.numFlies
+    
+    trialName = 'MSClutterWGround';
+    for trialID = 1:length(cond{condID}.allFlyData{flyID}.(trialName))
+
+        % Extract the appropriate data
+        FBDat =  cond{condID}.allFlyData{flyID}.(trialName){trialID}.ROIaveMax-1;
+        tAll = cond{1}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetRotMatch(:,1);
+        tAll = tAll - tAll(1);
+        forPos = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetForMatch;
+        latPos = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetLatMatch;
+        vF = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.vF;
+        vF = conv(vF',abs(exp(-tAll/bestGtOn)-exp(-tAll/bestGtOff)));
+        vF(size(FBDat,2):end) = [];
+        heading = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetRotMatch(:,2);
+
+        % Find the PVA
+        num_ROIs = size(FBDat,1);
+        angsraw = (1:num_ROIs)*2*pi/num_ROIs-pi;
+        angsraw = angsraw';
+        clear PVA;
+        clear PVAStren;
+        for ts = 1:size(FBDat,2)
+            PVA(ts) = circ_mean(angsraw,...
+                squeeze(FBDat(:,ts)));
+            PVAStren(ts) = circ_r(angsraw,...
+                squeeze(FBDat(:,ts)));
+        end
+        
+        strongEnough = find(PVAStren(1:end-1) > PVAStrenThresh);
+
+        offset = mod(PVA'-heading,2*pi)-pi;
+        offsetError = abs(diff(UnWrap(offset,2,0)));
+        offsetError(find(offsetError > errorMax)) = errorMax;
+
+        offsetIDs = discretize(offsetError,offsetEdges);
+        pltColors = zeros(length(offsetError),3);
+        for pltPt = 1:length(offsetError)
+            pltColors(pltPt,:) = [offsetIDs(pltPt)/numBins 0 0];
+        end
+
+        figure(offsetCodingClutter);
+        % Plot the trajectories colored by the offset
+        subplot(ceil(sqrt(cond{condID}.numFlies)),ceil(sqrt(cond{condID}.numFlies)),flyID);
+        hold on;
+        scatter(forPos(strongEnough),latPos(strongEnough),4,pltColors(strongEnough,:),'filled');
+        scatter(-5,0,100,'k','p');
+        axis equal;
+        axis off;
+    end
+end
+
+set(offsetCodingClutter,'PaperPositionMode','manual','PaperOrientation','landscape','PaperUnits','inches','PaperPosition',[0 0 11 8.5]);
+print(offsetCodingClutter,'C:\Users\turnerevansd\Documents\RawAnalysis\37G12\Figures\OffsetCodedTrajClutterError','-dpdf');
 
 %% Plot the trajectories color coded by the offsets - clutter w/cylinder
 
@@ -1675,8 +1881,8 @@ for flyID=1:cond{condID}.numFlies
         rectangle('Position',[-0.5 -0.5 1 1],'Curvature',1,'FaceColor','c');
         axis equal;
         axis off;
-        xlim([-10 10]);
-        ylim([-10 10]);
+        xlim([-15 15]);
+        ylim([-15 15]);
         if trialID == 1 & flyID == 1
             line([5 10],[-10 -10],'Color','k');
             text(7,-8,'10 cm');
@@ -1690,8 +1896,8 @@ for flyID=1:cond{condID}.numFlies
         rectangle('Position',[-0.5 -0.5 1 1],'Curvature',1,'FaceColor','c');
         axis equal;
         axis off;
-        xlim([-10 10]);
-        ylim([-10 10]);
+        xlim([-15 15]);
+        ylim([-15 15]);
         if trialID == 1 & flyID == 1
             text(-15,10,'local heading');
         end
@@ -1713,7 +1919,7 @@ print(offsetCodingCylinder,'C:\Users\turnerevansd\Documents\RawAnalysis\37G12\Fi
 
 condID = 1;
 
-PVAThresh = 0.2;
+PVAThresh = 0.25;
 
 offsetEdges = linspace(-pi,pi,9);
 offsetCents = offsetEdges(1:end-1);
@@ -1774,6 +1980,7 @@ for flyID=1:cond{condID}.numFlies
                 [NPVA,edgesPVA] = histcounts(offset(PVANow),offsetEdges);
                 NAll(angNow,:) = NAll(angNow,:)+NPVA;
                 text(-1.5,1.5,strcat('Nmax = ',num2str(max(NPVA))));
+                text(-1.5,1.25,strcat('maxID = ',num2str(find(NPVA == max(NPVA)))));
                 NPVA = NPVA./max(NPVA);
                 for histBin = 1:length(edgesPVA)-1
                     angPlt = linspace(edgesPVA(histBin),edgesPVA(histBin+1),5);
@@ -1817,3 +2024,122 @@ end
     
 % set(offsetCodingAll,'PaperPositionMode','manual','PaperOrientation','landscape','PaperUnits','inches','PaperPosition',[0 0 11 8.5]);
 % print(offsetCodingAll,'C:\Users\turnerevansd\Documents\RawAnalysis\37G12\Figures\OffsetCodedTrajAll','-dpdf');
+
+%% Plot histograms of heading difference across trials - clutter
+
+condID = 1;
+
+PVAThresh = 0.25;
+NMax = 40;
+tIgnore = 10;
+
+offsetEdges = linspace(-pi,pi,17);
+offsetCents = offsetEdges(1:end-1);
+offsetCents = offsetCents+0.5*mean(diff(offsetCents));
+
+offsetPeak = zeros(cond{condID}.numFlies, length(offsetCents), 3, 2);
+
+for flyID=1:cond{condID}.numFlies    
+
+    trialName = 'MSClutterWGround';
+    
+    NAll = zeros(length(offsetCents),length(offsetCents));
+    
+    for trialID = 1:length(cond{condID}.allFlyData{flyID}.(trialName))
+
+        % Extract the appropriate data
+        tAll = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetRotMatch(:,1);
+        tAll = tAll - tAll(1);
+        nConsider = find(tAll > tIgnore);
+        nStart = nConsider(1);
+        FBDat =  cond{condID}.allFlyData{flyID}.(trialName){trialID}.ROIaveMax(:,nStart:end)-1;
+        heading = cond{condID}.allFlyData{flyID}.(trialName){trialID}.positionDatMatch.OffsetRotMatch(nStart:end,2);
+
+        % Find the PVA
+        num_ROIs = size(FBDat,1);
+        angsraw = (1:num_ROIs)*2*pi/num_ROIs-pi;
+        angsraw = angsraw';
+        clear PVA;
+        clear PVAStren;
+        for ts = 1:size(FBDat,2)
+            PVA(ts) = circ_mean(angsraw,...
+                squeeze(FBDat(:,ts)));
+            PVAStren(ts) = circ_r(angsraw,...
+                squeeze(FBDat(:,ts)));
+        end
+
+        headingIDs = discretize(heading,offsetEdges);
+        
+        offset = mod(PVA'-heading,2*pi)-pi;
+        offsetIDs = discretize(offset,offsetEdges);
+
+        % For each heading group, find the max offset bin and the total
+        % number of time points spent in that bin
+        for angNow = 1:length(offsetCents)
+            PVANow = intersect(find(headingIDs == angNow),find(PVAStren > PVAThresh));
+            [NPVA,edgesPVA] = histcounts(offset(PVANow),offsetEdges);
+            maxDir = find(NPVA == max(NPVA));
+            if length(maxDir) < 2
+                offsetPeak(flyID,angNow,trialID,1) = sum(NPVA);
+                offsetPeak(flyID,angNow,trialID,2) = find(NPVA == max(NPVA));
+            end
+        end
+    end
+end
+
+PVADiffs = [];
+PVADiffsCtrl = [];
+for flyID=1:cond{condID}.numFlies     
+    for angNow = 1:length(offsetCents)
+        maxVals = offsetPeak(flyID,angNow,:,2);
+        belowThresh = find(offsetPeak(flyID,angNow,:,1) < NMax);
+        maxVals(belowThresh) = [];
+        if length(maxVals) == 2
+            diffNow = abs(diff(maxVals));
+            diffNow = min(diffNow,length(offsetCents)-diffNow);
+            PVADiffs = horzcat(PVADiffs,diffNow);
+            
+            diffNowCtrl = floor(rand()*length(offsetCents));
+            diffNowCtrl = min(diffNowCtrl,length(offsetCents)-diffNowCtrl);
+            PVADiffsCtrl = vertcat(PVADiffsCtrl,diffNowCtrl);
+        elseif length(maxVals) == 3
+            diffNow = abs(diff(maxVals));
+            diffNow = horzcat(diffNow,abs(maxVals(3)-maxVals(1)));
+            diffNow = min(diffNow,length(offsetCents)-diffNow);
+            PVADiffs = horzcat(PVADiffs,diffNow);
+            
+            diffNowCtrl = floor(rand(3,1)*length(offsetCents));
+            diffNowCtrl = min(diffNowCtrl,length(offsetCents)-diffNowCtrl);
+            PVADiffsCtrl = vertcat(PVADiffsCtrl,diffNowCtrl);
+        end
+    end
+end
+
+OffsetDiffs = [];
+for flyID=1:cond{condID}.numFlies     
+    for trialID = 1:3
+        maxVals = offsetPeak(flyID,:,trialID,2);
+        belowThresh = find(offsetPeak(flyID,:,trialID,1) < NMax);
+        maxVals(belowThresh) = [];
+        if length(maxVals) == 2
+            diffNow = abs(diff(maxVals));
+            diffNow = min(diffNow,length(offsetCents)-diffNow);
+            OffsetDiffs = horzcat(OffsetDiffs,diffNow);
+        elseif length(maxVals) > 2
+            diffNow = abs(diff(maxVals));
+            diffNow = horzcat(diffNow,abs(maxVals(end)-maxVals(1)));
+            diffNow = min(diffNow,length(offsetCents)-diffNow);
+            OffsetDiffs = horzcat(OffsetDiffs,diffNow);
+        end
+    end
+end
+
+figure;
+subplot(2,1,1);
+hold on;
+histogram(PVADiffs);
+histogram(PVADiffsCtrl);
+
+subplot(2,1,2);
+hold on;
+histogram(OffsetDiffs);

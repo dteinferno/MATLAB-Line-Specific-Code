@@ -497,7 +497,7 @@ for flyID = 1:cond{1}.numFlies
             vR = sgolayfilt(vR,sgolayOrder,sgolayFrames);
             vF = allAct{1}.fly{flyID}.period{periodID}.trial{trialID}.vF;
             vF = sgolayfilt(vF,sgolayOrder,sgolayFrames);
-            standingBouts = intersect(find(vR<=vRThresh),find(vF<=vFThresh));
+            standingBouts = intersect(find(abs(vR)<=vRThresh),find(vF<=vFThresh));
 
             % Group the standing bouts
             boutStart = vertcat(1,find(diff(standingBouts)>1)+1);
@@ -517,8 +517,8 @@ for flyID = 1:cond{1}.numFlies
             numBouts = numBouts+length(boutStart);
 
             % Add the standing bout info to the object
-            allAct{1}.fly{flyID}.period{periodID}.trial{trialID}.boutStart = boutStart;
-            allAct{1}.fly{flyID}.period{periodID}.trial{trialID}.boutStop = boutStop;
+            allAct{1}.fly{flyID}.period{periodID}.trial{trialID}.boutStart = standingBouts(boutStart);
+            allAct{1}.fly{flyID}.period{periodID}.trial{trialID}.boutStop = standingBouts(boutStop);
 
         end
         

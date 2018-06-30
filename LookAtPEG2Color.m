@@ -560,7 +560,7 @@ for condID = 1:length(cond)
                     if colorID == 1
                         ylabel('|vR| autocorrelation');
                         if flyID == 1
-                            text(-tStep*numPts/2,1.25,allAct{condID}.name);
+                            text(-tStep*numPts/2,0.55,allAct{condID}.name);
                             if periodID == 4
                                legend({'dark','CL','CW','CCW'});
                             end
@@ -599,7 +599,7 @@ for condID = 1:length(cond)
                     if colorID == 1
                         ylabel('vR > 0 autocorrelation');
                         if flyID == 1
-                            text(-tStep*numPts/2,1.25,allAct{condID}.name);
+                            text(-tStep*numPts/2,0.6,allAct{condID}.name);
                         end
                         title(strcat('fly #',num2str(flyID),'-red'));
                     else
@@ -621,9 +621,6 @@ for condID = 1:length(cond)
                       'LineWidth',2,'LineStyle','--');
                     if colorID == 1
                         ylabel('vR < 0 autocorrelation');
-                        if flyID == 1
-                            text(-tStep*numPts/2,1.25,allAct{condID}.name);
-                        end
                         title(strcat('fly #',num2str(flyID),'-red'));
                     else
                         title(strcat('fly #',num2str(flyID),'-green'));
@@ -657,6 +654,298 @@ for condID = 1:length(cond)
    set(reg,'PaperPositionMode','manual','PaperOrientation','landscape','PaperUnits','inches','PaperPosition',[0 0 11 8.5]);
     print(reg,strcat('C:\Users\turnerevansd\Documents\RawAnalysis\RSS2191G20739\',...
     allAct{condID}.name,'\',allAct{condID}.name,'_MeanAutoCC'),'-dpdf');
+end
+
+%% Plot the regressions nicely
+% For each condition, pick and plot an example fly, and the correlation
+% offset and delay for each condition
+
+EBExFly = 5;
+PBExFly = 2;
+
+% Look at the EB and PB
+for condID = 1:length(cond)
+   reg = figure('units','normalized','outerposition',[0 0 1 1]);
+   
+   numFlies = length(allAct{condID}.fly);
+   % Step through the flies
+   for flyID = 1:cond{condID}.numFlies
+      % Sort the data by period
+      for periodID = 1:4
+
+          % Sort the data by color
+          for colorID = 1:2
+              if contains(allAct{condID}.name,'EB')
+                  vRAll = [];
+                  vFAll = [];
+              elseif contains(allAct{condID}.name,'PB')
+                  vRPosLAll = [];
+                  vRNegLAll = [];
+                  vFLAll = [];
+                  vRPosRAll = [];
+                  vRNegRAll = [];
+                  vFRAll = [];
+              end
+              % Sort the data across trials
+              for trialID = 1:length(cond{condID}.allFlyData{flyID}.All)
+
+                  % Group across trials
+                  if contains(allAct{condID}.name,'EB')
+                      vRAll = horzcat(vRAll,allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.vRAutoC);
+                      vFAll = horzcat(vFAll,allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.vFAutoC);
+                  elseif contains(allAct{condID}.name,'PB') 
+                      vRPosLAll = horzcat(vRPosLAll,allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.PBSide{1}.vRPosAutoC);
+                      vRPosRAll = horzcat(vRPosLAll,allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.PBSide{2}.vRPosAutoC);
+
+                      vRNegLAll = horzcat(vRNegLAll,allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.PBSide{1}.vRNegAutoC);
+                      vRNegRAll = horzcat(vRNegLAll,allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.PBSide{2}.vRNegAutoC);
+
+                      vFLAll = horzcat(vFLAll,allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.PBSide{1}.vFAutoC);
+                      vFRAll = horzcat(vFRAll,allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.PBSide{2}.vFAutoC);
+                  end
+              end
+              if contains(allAct{condID}.name,'EB')
+                  if flyID == EBExFly
+                      subplot(2,4,colorID);
+                      hold on;
+                      plot(-tStep*numPts/2+linspace(0,(numPts-1)*tStep,numPts),mean(vRAll,2),'Color',...
+                          allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.color);
+                      ax = gca;
+                      if colorID == 1
+                          ylabel('|vR| autocorrelation');
+                          text(-tStep*numPts/2-1,1.15,strcat(allAct{condID}.name,'-Summary'),'FontSize',14);
+                          if periodID == 4
+                             legend({'dark','CL','CW','CCW'});
+                             legend('boxoff');
+                          end
+                          title('red channel');
+                          ax.XColor = [0.5 0 0.5];
+                          ax.YColor = [0.5 0 0.5];
+                      else
+                          title('green channel');
+                          ax.XColor = [0 0.5 0];
+                          ax.YColor = [0 0.5 0];
+                      end
+                      if periodID == 4
+                          line([-tStep*numPts/2 tStep*numPts/2],[0 0], 'Color', 'k','LineStyle','--');
+                          line([0 0],[-0.25 1], 'Color', 'k','LineStyle','--');
+                          ylim([-0.25 1]);
+                          xlim([-tStep*numPts/2 tStep*numPts/2]);
+                      end
+                                          
+                      subplot(2,4,4+colorID);
+                      hold on;
+                      plot(-tStep*numPts/2+linspace(0,(numPts-1)*tStep,numPts),mean(vFAll,2),'Color',...
+                        allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.color);
+                      if periodID == 4
+                          line([-tStep*numPts/2 tStep*numPts/2],[0 0], 'Color', 'k','LineStyle','--');
+                          line([0 0],[-0.25 1], 'Color', 'k','LineStyle','--');
+                          ylim([-0.25 1]);
+                          xlim([-tStep*numPts/2 tStep*numPts/2]);
+                      end
+                      ax = gca;
+                      if colorID == 1
+                          ylabel('vF autocorrelation');
+                          ax.XColor = [0.5 0 0.5];
+                          ax.YColor = [0.5 0 0.5];
+                      else
+                          ax.XColor = [0 0.5 0];
+                          ax.YColor = [0 0.5 0];
+                      end
+                      xlabel('time delay (s)');
+                  end
+                           
+                  for vVar = 1:2
+                      if vVar ==1 
+                          maxCC = max(mean(vRAll,2));
+                          CClag = -tStep*numPts/2+(find(mean(vRAll,2)==maxCC)-1)*tStep;
+                      else
+                          maxCC = max(mean(vFAll,2));
+                          CClag = -tStep*numPts/2+(find(mean(vFAll,2)==maxCC)-1)*tStep;
+                      end
+                      
+                          
+                      subplot(2,4,3+4*(vVar-1));
+                      hold on;
+                      scatter(0.25*(colorID-1.5)+periodID+0.05*(flyID-ceil(cond{condID}.numFlies/2)),maxCC,...
+                          40,allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.color, 'filled');
+                      if colorID == 1
+                        scatter(0.25*(colorID-1.5)+periodID+0.05*(flyID-ceil(cond{condID}.numFlies/2)),maxCC,...
+                              40,[0.5 0 0.5]);
+                      else
+                          scatter(0.25*(colorID-1.5)+periodID+0.05*(flyID-ceil(cond{condID}.numFlies/2)),maxCC,...
+                              40,[0 0.5 0]);
+                      end
+        %                   alpha(0.5);
+                      ylim([-0.25 1]);
+                      set(gca,'XTick',[1:4],'XTickLabels',{'dark','CL','CW','CCW'});
+                      line([0 5],[0 0],'Color','k','LineStyle','--');
+
+                      subplot(2,4,4+4*(vVar-1));
+                      hold on;
+                      scatter(0.25*(colorID-1.5)+periodID+0.05*(flyID-ceil(cond{condID}.numFlies/2)),CClag,...
+                          40,allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.color, 'filled');
+                      if colorID == 1
+                        scatter(0.25*(colorID-1.5)+periodID+0.05*(flyID-ceil(cond{condID}.numFlies/2)),CClag,...
+                              40,[0.5 0 0.5]);
+                      else
+                          scatter(0.25*(colorID-1.5)+periodID+0.05*(flyID-ceil(cond{condID}.numFlies/2)),CClag,...
+                              40,[0 0.5 0]);
+                      end
+                      ylim([-2.5 0]);
+                      ylabel('peak time');
+                      set(gca,'XTick',[1:4],'XTickLabels',{'dark','CL','CW','CCW'});
+                  end
+                  
+              elseif contains(allAct{condID}.name,'PB')
+                  if flyID == PBExFly
+                    subplot(3,6,colorID);
+                    hold on;
+                    plot(-tStep*numPts/2+linspace(0,(numPts-1)*tStep,numPts),mean(vRPosRAll,2),'Color',...
+                        allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.color);
+                    plot(-tStep*numPts/2+linspace(0,(numPts-1)*tStep,numPts),mean(vRPosLAll,2),'Color',...
+                        allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.color,...
+                      'LineWidth',2,'LineStyle','--');
+                    ax = gca;
+                    if colorID == 1
+                        ylabel('vR > 0 autocorrelation');
+                        text(-tStep*numPts/2-1,1.15,strcat(allAct{condID}.name,'-Summary'));
+                        title('red channel');
+                        ax.XColor = [0.5 0 0.5];
+                        ax.YColor = [0.5 0 0.5];
+                    else
+                        title('green channel');
+                        ax.XColor = [0 0.5 0];
+                        ax.YColor = [0 0.5 0];
+                    end
+                    if periodID == 4
+                        line([-tStep*numPts/2 tStep*numPts/2],[0 0], 'Color', 'k','LineStyle','--');
+                        line([0 0],[-0.25 1], 'Color', 'k','LineStyle','--');
+                        ylim([-0.25 1]);
+                        xlim([-tStep*numPts/2 tStep*numPts/2]);
+                        if colorID == 1
+                            legend({'dark (R)','dark (L)','CL (R)','CL(L)','CW (R)','CW (L)','CCW (R)','CCW (L)'});
+                            legend('boxoff');
+                        end
+                    end
+                    
+                    subplot(3,6,6+colorID);
+                    hold on;
+                    plot(-tStep*numPts/2+linspace(0,(numPts-1)*tStep,numPts),mean(vRNegRAll,2),'Color',...
+                        allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.color);
+                    plot(-tStep*numPts/2+linspace(0,(numPts-1)*tStep,numPts),mean(vRNegLAll,2),'Color',...
+                        allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.color,...
+                      'LineWidth',2,'LineStyle','--');
+                    ax = gca;
+                    if colorID == 1
+                        ylabel('vR < 0 autocorrelation');
+                        ax.XColor = [0.5 0 0.5];
+                        ax.YColor = [0.5 0 0.5];
+                    else
+                        ax.XColor = [0 0.5 0.5];
+                        ax.YColor = [0 0.5 0.5];
+                    end
+                    if periodID == 4
+                        line([-tStep*numPts/2 tStep*numPts/2],[0 0], 'Color', 'k','LineStyle','--');
+                        line([0 0],[-0.25 1], 'Color', 'k','LineStyle','--');
+                        ylim([-0.25 1]);
+                        xlim([-tStep*numPts/2 tStep*numPts/2]);
+                    end
+
+                    subplot(3,6,12+colorID);
+                    hold on;
+                    plot(-tStep*numPts/2+linspace(0,(numPts-1)*tStep,numPts),mean(vFRAll,2),'Color',...
+                      allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.color);
+                    plot(-tStep*numPts/2+linspace(0,(numPts-1)*tStep,numPts),mean(vFLAll,2),'Color',...
+                      allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.color,...
+                      'LineWidth',2,'LineStyle','--');
+                    line([-tStep*numPts/2 tStep*numPts/2],[0 0], 'Color', 'k','LineStyle','--');
+                    line([0 0],[-0.25 1], 'Color', 'k','LineStyle','--');
+                    ylim([-0.25 1]);
+                    xlim([-tStep*numPts/2 tStep*numPts/2]);
+                    ax = gca;
+                    if colorID == 1
+                        ylabel('vF autocorrelation');
+                        ax.XColor = [0.5 0 0.5];
+                        ax.YColor = [0.5 0 0.5];
+                    else
+                        ax.XColor = [0 0.5 0];
+                        ax.YColor = [0 0.5 0];
+                    end
+                    xlabel('time delay (s)');
+                  end
+                  
+                  for vVar = 1:6
+                      if vVar == 1 
+                          maxCC = max(mean(vRPosLAll,2));
+                          CClag = -tStep*numPts/2+(find(mean(vRPosLAll,2)==maxCC)-1)*tStep;
+                      elseif vVar == 2
+                          maxCC = max(mean(vRNegLAll,2));
+                          CClag = -tStep*numPts/2+(find(mean(vRNegLAll,2)==maxCC)-1)*tStep;
+                      elseif vVar == 3
+                          maxCC = max(mean(vFLAll,2));
+                          CClag = -tStep*numPts/2+(find(mean(vFLAll,2)==maxCC)-1)*tStep;
+                      elseif vVar == 4
+                          maxCC = max(mean(vRPosRAll,2));
+                          CClag = -tStep*numPts/2+(find(mean(vRPosRAll,2)==maxCC)-1)*tStep;
+                      elseif vVar == 5
+                          maxCC = max(mean(vRNegRAll,2));
+                          CClag = -tStep*numPts/2+(find(mean(vRNegRAll,2)==maxCC)-1)*tStep;
+                      elseif vVar == 6
+                          maxCC = max(mean(vFRAll,2));
+                          CClag = -tStep*numPts/2+(find(mean(vFRAll,2)==maxCC)-1)*tStep;
+                      end
+                      
+                          
+                      subplot(3,6,3+6*mod(vVar-1,3)+floor((vVar-1)/3));
+                      hold on;
+                      scatter(0.25*(colorID-1.5)+periodID+0.05*(flyID-ceil(cond{condID}.numFlies/2)),maxCC,...
+                          30,allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.color, 'filled');
+                      if colorID == 1
+                        scatter(0.25*(colorID-1.5)+periodID+0.05*(flyID-ceil(cond{condID}.numFlies/2)),maxCC,...
+                              30,[0.5 0 0.5]);
+                      else
+                          scatter(0.25*(colorID-1.5)+periodID+0.05*(flyID-ceil(cond{condID}.numFlies/2)),maxCC,...
+                              30,[0 0.5 0]);
+                      end
+        %                   alpha(0.5);
+                      ylim([-0.25 1]);
+                      set(gca,'XTick',[1:4],'XTickLabels',{'dark','CL','CW','CCW'});
+                      line([0 5],[0 0],'Color','k','LineStyle','--');
+                      if vVar < 4
+                          title('left PB');
+                      else
+                          title('right PB');
+                      end
+
+                      subplot(3,6,5+6*mod(vVar-1,3)+floor((vVar-1)/3));
+                      hold on;
+                      scatter(0.25*(colorID-1.5)+periodID+0.05*(flyID-ceil(cond{condID}.numFlies/2)),CClag,...
+                          30,allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.color, 'filled');
+                      if colorID == 1
+                        scatter(0.25*(colorID-1.5)+periodID+0.05*(flyID-ceil(cond{condID}.numFlies/2)),CClag,...
+                              30,[0.5 0 0.5]);
+                      else
+                          scatter(0.25*(colorID-1.5)+periodID+0.05*(flyID-ceil(cond{condID}.numFlies/2)),CClag,...
+                              30,[0 0.5 0]);
+                      end
+                      ylim([-2.5 0]);
+                      if vVar < 4
+                          title('left PB');
+                          ylabel('peak time');
+                      else
+                          title('right PB');
+                      end
+                      set(gca,'XTick',[1:4],'XTickLabels',{'dark','CL','CW','CCW'});
+                  end
+              end
+          end
+      end
+   end
+   reg.Renderer='Painters';
+   set(reg,'PaperPositionMode','manual','PaperOrientation','landscape','PaperUnits','inches','PaperPosition',[0 0 11 8.5]);
+   print(reg,strcat('C:\Users\turnerevansd\Documents\RawAnalysis\RSS2191G20739\',...
+   allAct{condID}.name,'\',allAct{condID}.name,'_CCSummary'),'-dpdf');
 end
 
 %% In the PB, look at the auto correlations for right and left turns for the PB only
@@ -1274,3 +1563,469 @@ for condID = 1:length(cond)
        end
    end
 end
+
+%% Look at the bump persistance
+
+% Set the Savitsky Golay filter parameters
+sgolayOrder = 3;
+sgolayFrames = 11;
+
+% Set the velocity thresholds that define standing bouts
+vRThresh = 0.01*pi;
+vFThresh = 0.01;
+
+% Set a threshold for the length of a standing bout
+minBoutL = 5;
+
+% Step through the conditions
+for condID = 1:length(cond)
+    % Step through the flies
+    for flyID = 1:cond{condID}.numFlies
+        
+        % Step through the colors
+        for colorID = 1:2
+
+            numPeriods = length(allAct{condID}.fly{flyID}.color{colorID}.period);
+            
+            % Sort the data by period
+            for periodID = 1:numPeriods
+
+                % Inititalize variables
+                maxBoutL = 0; % Max bout length
+                numBouts = 0; % Number of bouts
+
+                % Sort the data across trials
+                for trialID = 1:length(cond{condID}.allFlyData{flyID}.All)
+
+                    % Find the time step
+                    tPts = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.tPts;
+                    tStep = mean(diff(tPts));
+
+                    % Find when the animal is standing
+                    vR = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.vR;
+                    vR = sgolayfilt(vR,sgolayOrder,sgolayFrames);
+                    vF = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.vF;
+                    vF = sgolayfilt(vF,sgolayOrder,sgolayFrames);
+                    standingBouts = intersect(find(abs(vR)<=vRThresh),find(vF<=vFThresh));
+
+                    % Group the standing bouts
+                    boutStart = vertcat(1,find(diff(standingBouts)>1)+1);
+                    boutStop = vertcat(find(diff(standingBouts)>1),length(standingBouts));
+
+                    % Remove shorter bouts
+                    shortBouts = [];
+                    for bout = 1:length(boutStart)
+                        if (boutStop(bout)-boutStart(bout)) <= minBoutL 
+                            shortBouts = vertcat(shortBouts,bout);
+                        end
+                    end
+                    boutStart(shortBouts) = [];
+                    boutStop(shortBouts) = [];
+
+                    if ~isempty(boutStart)
+                        maxBoutL = max(maxBoutL,max(boutStop-boutStart)+1);
+                    end
+                    numBouts = numBouts+length(boutStart);
+
+                    % Add the standing bout info to the object
+                    allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.boutStart = standingBouts(boutStart);
+                    allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.boutStop = standingBouts(boutStop);
+
+                end
+
+                allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.maxBoutL = maxBoutL;
+                allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.numBouts = numBouts;
+            end
+        end
+    end
+end
+
+% Group the standing bouts across trials
+
+% Make the figure
+bumpPerEB = figure('units','normalized','outerposition',[0 0 1 1]);
+bumpPerPB = figure('units','normalized','outerposition',[0 0 1 1]);
+
+for condID = 1:length(cond)
+    % Step through the flies
+    for flyID = 1:cond{1}.numFlies
+
+        % Step through the colors
+        for colorID = 1:2
+
+            numPeriods = length(allAct{condID}.fly{flyID}.color{colorID}.period);
+            % Sort the data by period
+            for periodID = 1:numPeriods
+
+                % Pull out the relevant values
+                maxBoutL = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.maxBoutL;
+                numBouts = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.numBouts;
+
+                standBout = 1;
+                if contains(allAct{condID}.name,'EB')
+                    standAct = zeros(numBouts,16,maxBoutL);
+                    standActMean = zeros(16,maxBoutL);
+                elseif contains(allAct{condID}.name,'PB')
+                    standActL = zeros(numBouts,8,maxBoutL);
+                    standActR = zeros(numBouts,8,maxBoutL);
+                    standActMeanL = zeros(8,maxBoutL);
+                    standActMeanR = zeros(8,maxBoutL);
+                end
+
+                % Sort the data across trials
+                for trialID = 1:length(cond{condID}.allFlyData{flyID}.All)
+
+                    if contains(allAct{condID}.name,'EB')
+                        % Place all of the standing bout activity into the array
+                        actNow = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.act-1;
+                        boutStart = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.boutStart;
+                        boutStop = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.boutStop;
+
+                        if ~isempty(boutStart)
+                            for bout = 1:length(boutStart)
+                                actBout = actNow(:,boutStart(bout):boutStop(bout));
+                                maxROI = find(actBout(:,1) == max(actBout(:,1)));
+                                actBoutShift = circshift(actBout,8-maxROI,1);
+                                standAct(standBout,:,1:(boutStop(bout)-boutStart(bout)+1)) = actBoutShift;
+                                standBout = standBout + 1;
+                            end
+                        end
+                    elseif contains(allAct{condID}.name,'PB')
+                        % Place all of the standing bout activity into the array
+                        actNowL = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.PBSide{1}.act-1;
+                        actNowR = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.PBSide{2}.act-1;
+                        boutStart = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.boutStart;
+                        boutStop = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.boutStop;
+
+                        if ~isempty(boutStart)
+                            for bout = 1:length(boutStart)
+                                actBoutL = actNowL(:,boutStart(bout):boutStop(bout));
+                                actBoutR = actNowR(:,boutStart(bout):boutStop(bout));
+                                maxROIL = find(actBoutL(:,1) == max(actBoutL(:,1)));
+                                maxROIR = find(actBoutR(:,1) == max(actBoutR(:,1)));
+                                actBoutShiftL = circshift(actBoutL,4-maxROIL,1);
+                                actBoutShiftR = circshift(actBoutR,4-maxROIR,1);
+                                standActL(standBout,:,1:(boutStop(bout)-boutStart(bout)+1)) = actBoutShiftL;
+                                standActR(standBout,:,1:(boutStop(bout)-boutStart(bout)+1)) = actBoutShiftR;
+                                standBout = standBout + 1;
+                            end
+                        end
+                    end
+                end
+
+                % Find the mean activity profile
+                for l = 1:maxBoutL
+                    if contains(allAct{condID}.name,'EB')
+                        allActNow = squeeze(standAct(:,:,l));
+                        zeroPers = [];
+                        for bout = 1:size(allActNow,1)
+                            if max(allActNow(bout,:)) == 0
+                                zeroPers = vertcat(zeroPers,bout);
+                            end
+                        end
+                        allActNow(zeroPers,:) = [];
+                        standActMean(:,l) = mean(allActNow,1);
+                    elseif contains(allAct{condID}.name,'PB')
+                        allActNowL = squeeze(standActL(:,:,l));
+                        allActNowR = squeeze(standActR(:,:,l));
+                        zeroPers = [];
+                        for bout = 1:size(allActNowL,1)
+                            if max(allActNowL(bout,:)) == 0
+                                zeroPers = vertcat(zeroPers,bout);
+                            end
+                        end
+                        allActNowL(zeroPers,:) = [];
+                        allActNowR(zeroPers,:) = [];
+                        standActMeanL(:,l) = mean(allActNowL,1);
+                        standActMeanR(:,l) = mean(allActNowR,1);
+                    end
+                end
+
+                % Plot the mean values
+                angVals = linspace(-pi,pi,17);
+                angVals(end) = [];
+                angVals = angVals + 0.5*mean(diff(angVals));
+                if contains(allAct{condID}.name,'EB')
+                    allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.standAct = standAct;
+                    allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.standActMean = standActMean;
+                    
+                    figure(bumpPerEB);
+                    subplot(numPeriods,2*cond{condID}.numFlies,2*flyID+colorID-2+2*cond{condID}.numFlies*(periodID-1))
+                    tVals = tStep*[0:size(standActMean,2)-1];
+                    imagesc(tVals,angVals,standActMean);
+                    if flyID == 1
+                        ylabel('EB position (rad');
+                    end
+                    if colorID == 1
+                        caxis([0 1]);
+                    else
+                        caxis([0 0.75]);
+                    end
+                elseif contains(allAct{condID}.name,'PB')
+                    allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.standActL = standActL;
+                    allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.standActR = standActR;
+                    allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.standActMeanL = standActMeanL;
+                    allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.standActMeanR = standActMeanR;
+                    
+                    figure(bumpPerPB);
+                    subplot(numPeriods,4*cond{condID}.numFlies,4*flyID+colorID-4+4*cond{condID}.numFlies*(periodID-1))
+                    tVals = tStep*[0:size(standActMeanL,2)-1];
+                    imagesc(tVals,[1:8],standActMeanL);
+                    if flyID == 1
+                        ylabel('PB position (rad');
+                    end
+                    xlim([0 5]);
+                    if colorID == 1
+                        caxis([0 1]);
+                    else
+                        caxis([0 0.75]);
+                    end
+                    colormap(brewermap(64, 'Blues'));
+                    if periodID == 4
+                        xlabel('time (s)');
+                    end
+                    if periodID == 1
+                       text(0,-1.25*pi,strcat('fly #',num2str(flyID))); 
+                    end
+                    title(allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.type);
+                    
+                    subplot(numPeriods,4*cond{condID}.numFlies,4*flyID+colorID-2+4*cond{condID}.numFlies*(periodID-1))
+                    tVals = tStep*[0:size(standActMeanR,2)-1];
+                    imagesc(tVals,[1:8],standActMeanR);
+                    if colorID == 1
+                        caxis([0 1]);
+                    else
+                        caxis([0 0.75]);
+                    end
+                end
+                xlim([0 5]);
+                colormap(brewermap(64, 'Blues'));
+                if periodID == 4
+                    xlabel('time (s)');
+                end
+                if periodID == 1
+                   text(0,-1.25*pi,strcat('fly #',num2str(flyID))); 
+                end
+                title(allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.type);
+            end
+        end
+    end
+end
+
+set(bumpPerEB,'PaperPositionMode','manual','PaperOrientation','landscape','PaperUnits','inches','PaperPosition',[0 0 11 8.5]);
+print(bumpPerEB,strcat('C:\Users\turnerevansd\Documents\RawAnalysis\RSS2191G20739\EB\EB_Persistence'),'-dpdf');
+
+set(bumpPerPB,'PaperPositionMode','manual','PaperOrientation','landscape','PaperUnits','inches','PaperPosition',[0 0 11 8.5]);
+print(bumpPerPB,strcat('C:\Users\turnerevansd\Documents\RawAnalysis\RSS2191G20739\PB\PB_Persistence'),'-dpdf');
+
+%% Look at the bump persistance - create nice summary figure
+
+% Example flies and standing bouts
+EBFlyEx = 2;
+EBBout = 3;
+
+PBFlyEx = 5;
+PBBout = 1;
+
+% Make the figure
+bumpPer = figure('units','normalized','outerposition',[0 0 1 1]);
+
+% Step through the conditions
+for condID = 1:length(cond)
+    % Step through the flies
+    for flyID = 1:cond{1}.numFlies
+
+        % Step through the colors
+        for colorID = 1:2
+
+            % Sort the data by period
+            for periodID = 1
+
+                if contains(allAct{condID}.name,'EB')
+                    
+                    % Specify the EB angles
+                    angVals = linspace(-pi,pi,17);
+                    angVals(end) = [];
+                    angVals = angVals + 0.5*mean(diff(angVals));
+                    
+                    % Pull out the activity
+                    standAct = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.standAct;
+                    allStandAct = squeeze(standAct(:,8,:));
+                    
+                    % Find the time step
+                    tPts = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.tPts;
+                    tStep = mean(diff(tPts));
+                    tVals = tStep*[0:size(standAct,3)-1];
+                    
+                    % Normalize each trial for plotting and get rid of zero
+                    % values from the array initialization
+                    clear standActMean;
+                    for l = 1:allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.maxBoutL
+                        allActNow = squeeze(standAct(:,:,l));
+                        zeroPers = [];
+                        for bout = 1:size(allActNow,1)
+                            if max(allActNow(bout,:)) == 0
+                                zeroPers = vertcat(zeroPers,bout);
+                            else
+                                allActNow(bout,:) = allActNow(bout,:)./standAct(bout,8,1);
+                            end
+                        end
+                        allActNow(zeroPers,:) = [];
+                        standActMean(:,l) = mean(allActNow,1);
+                    end
+                    
+                    % Plot the EB example
+                    if flyID == EBFlyEx
+                        subplot(4,4,4*colorID-3);
+                        hold on;
+                        imagesc(tVals,angVals,squeeze(standAct(EBBout,:,:)));
+                        line([0 3],[angVals(8) angVals(8)],'Color','k','LineStyle','--');
+                        caxis([0 1]);
+                        xlim([0 3]);
+                        ylim([-pi pi]);
+                        ylabel('EB position (rad)');
+                        if colorID == 1
+                            title('red channel');
+                        else
+                            title('green channel');
+                        end
+                        colorbar;
+                        
+                        subplot(4,4,4*colorID-2);
+                        plot(tVals,squeeze(standAct(EBBout,8,:)));
+                        xlim([0 3]);
+                        ylim([0 1]);
+                        ylabel('DF/F');
+                        
+                        subplot(4,4,4*colorID-1);
+                        hold on;
+                        for bout = 1:size(standAct,1)
+                            allStandAct(bout,:) = allStandAct(bout,:)./allStandAct(bout,1);
+                        end
+                        plot(tVals,allStandAct);
+                        plot(tVals,squeeze(standActMean(8,:)),'k','LineWidth',2);
+                        f = fit(tVals',squeeze(standActMean(8,:))','exp1');
+                        plot(tVals,f.a*exp(f.b*tVals),'Color','r');
+                        text(2,1.25,strcat('tau =',num2str(-1/f.b),' s'));
+                        xlim([0 3]);
+                        ylabel('normalized F');
+                        ylim([0 2]);
+                        
+                        colormap(brewermap(64, 'Blues'));
+                    end
+                    
+                    % Calculate and plot the decay time constant
+                    subplot(4,4,[4 8]);
+                    hold on;
+                    f = fit(tVals',squeeze(standActMean(8,:))','exp1');
+                    scatter(colorID+0.05*(flyID-3),-1/f.b,40,[2-colorID colorID-1 2-colorID],'filled');
+                    xlim([0 3]);
+                    set(gca,'XTick',[1 2],'XTickLabels',{'red','green'});
+                    ylim([0 20]);
+                    ylabel('tau (s)');
+                  
+                    
+                elseif contains(allAct{condID}.name,'PB')
+                    
+                    % Pull out the activity
+                    standActL = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.standActL;
+                    standActR = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.standActR;
+                    allStandActL = squeeze(standActL(:,4,:));
+                    allStandActR = squeeze(standActR(:,4,:));
+                    
+                    % Find the time step
+                    tPts = allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.tPts;
+                    tStep = mean(diff(tPts));
+                    tVals = tStep*[0:size(standActL,3)-1];
+                    
+                    % Normalize the data for plotting and remove 0 values
+                    clear standActMeanL;
+                    clear standActMeanR;
+                    for l = 1:allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.maxBoutL
+                        allActNowL = squeeze(standActL(:,:,l));
+                        allActNowR = squeeze(standActR(:,:,l));
+                        zeroPers = [];
+                        for bout = 1:size(allActNowL,1)
+                            if max(allActNowL(bout,:)) == 0
+                                zeroPers = vertcat(zeroPers,bout);
+                            else
+                                allActNowL(bout,:) = allActNowL(bout,:)./standActL(bout,4,1);
+                                allActNowR(bout,:) = allActNowR(bout,:)./standActR(bout,4,1);
+                            end
+                        end
+                        allActNowL(zeroPers,:) = [];
+                        allActNowR(zeroPers,:) = [];
+                        standActMeanL(:,l) = mean(allActNowL,1);
+                        standActMeanR(:,l) = mean(allActNowR,1);
+                    end
+                    
+                    % Plot the PB example
+                    if flyID == PBFlyEx
+                        subplot(4,4,8+4*colorID-3);
+                        hold on;
+                        imagesc(tVals,[1:8],squeeze(standActL(PBBout,:,:)));
+                        line([0 3],[4 4],'Color','k','LineStyle','--');
+                        caxis([0 1]);
+                        xlim([0 3]);
+                        ylim([0 9]);
+                        ylabel('PB position (glom)');
+                        if colorID == 1
+                            title('red channel');
+                        else
+                            title('green channel');
+                            xlabel('standing time (s)');
+                        end
+                        colorbar;
+                        
+                        subplot(4,4,8+4*colorID-2);
+                        plot(tVals,squeeze(standActL(PBBout,4,:)));
+                        xlim([0 3]);
+                        ylim([0 1]);
+                        ylabel('DF/F');
+                        if colorID == 2
+                            xlabel('standing time (s)');
+                        end
+                        
+                        subplot(4,4,8+4*colorID-1);
+                        hold on;
+                        for bout = 1:size(standActL,1)
+                            allStandActL(bout,:) = allStandActL(bout,:)./allStandActL(bout,1);
+                        end
+                        plot(tVals,allStandActL);
+                        plot(tVals,squeeze(standActMeanL(4,:)),'k','LineWidth',2);
+                        f = fit(tVals',squeeze(standActMeanL(4,:))','exp1');
+                        plot(tVals,f.a*exp(f.b*tVals),'Color','r');
+                        text(2,1.25,strcat('tau =',num2str(-1/f.b),' s'));
+                        xlim([0 3]);
+                        ylabel('normalized F');
+                        if colorID == 2
+                            xlabel('standing time (s)');
+                        end
+                        ylim([0 2]);
+                        
+                        colormap(brewermap(64, 'Blues'));
+                    end
+                    
+                    % Find and plot the exponential coefficient
+                    subplot(4,4,[12 16]);
+                    hold on;
+                    
+                    f1 = fit(tVals',squeeze(standActMeanL(4,:))','exp1');
+                    scatter(colorID-0.125,-f1.b,40,[2-colorID colorID-1 2-colorID],'filled');
+                    f2 = fit(tVals',squeeze(standActMeanR(4,:))','exp1');
+                    scatter(colorID+0.125,-f2.b,40,[2-colorID colorID-1 2-colorID],'filled');
+                    line([colorID-0.125 colorID+0.125],[-f1.b -f2.b],'color',[0.9 0.9 0.9]);
+                    xlim([0 3]);
+                    set(gca,'XTick',[1 2],'XTickLabels',{'red','green'});
+%                     ylim([-0.4 0.4]);
+                    ylabel('1/tau Hz');
+                    line([0 3],[0 0],'color','k','LineStyle','--');
+                    
+                end
+            end
+        end
+    end
+end
+
+set(bumpPer,'PaperPositionMode','manual','PaperOrientation','landscape','PaperUnits','inches','PaperPosition',[0 0 11 8.5]);
+print(bumpPer,strcat('C:\Users\turnerevansd\Documents\RawAnalysis\RSS2191G20739\PersistenceSummary'),'-dpdf');
