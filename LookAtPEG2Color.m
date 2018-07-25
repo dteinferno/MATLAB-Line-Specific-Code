@@ -114,7 +114,7 @@ end
 
 %% Plot example trials
 % Specify the EB example
-EBFly = 2;
+EBFly = 5;
 EBTrial = 2;
 
 % Specify the PB example
@@ -291,6 +291,96 @@ for regionID = 1:2
         allAct{regionID}.name,'\',allAct{regionID}.name,'_',...
         allAct{regionID}.fly{flyID}.color{1}.period{periodID}.type,'_Ex'),'-dpdf');
     end
+end
+
+%% Plot the velocity distributions across conditions and flies
+
+colorID = 1;
+
+vRBins = linspace(-2*pi,2*pi,32);
+vFBins = linspace(0,2,11);
+
+% Look at the EB and PB
+for condID = 1:length(allAct)
+    
+   vRStats = figure('units','normalized','outerposition',[0 0 1 1]);
+   vFStats = figure('units','normalized','outerposition',[0 0 1 1]);
+   
+   % Step through the flies
+   for flyID = 1:cond{condID}.numFlies
+       
+      % Sort the data across trials
+      for trialID = 1:length(cond{condID}.allFlyData{flyID}.All)
+          
+          % Sort the data by period
+          for periodID = 1:4
+              
+              figure(vRStats);
+              subplot(4,cond{condID}.numFlies,flyID+(periodID-1)*cond{condID}.numFlies);
+              hold on;
+              h1 = histogram(allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.vR,...
+                  vRBins);
+              h1.FaceColor = 'b';
+              h1.EdgeColor = [0.2*trialID 0.2*trialID 0.2*trialID];
+              h1.FaceAlpha = 0.2;
+              xlim([-pi pi]);
+              if periodID < 3
+                  ylim([0 500]);
+              else
+                  ylim([0 250]);
+              end
+              if flyID == 1
+                  if periodID == 1 & trialID == 1
+                    text(-1.25*pi,600,cond{condID}.name);
+                  end
+                  ylabel(strcat(allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.type,'-counts'));
+              end
+              if trialID == 1 
+                  if periodID == 1
+                      title(strcat('fly #',num2str(flyID)));
+                  elseif periodID == 4
+                      xlabel('vR (rad/s)');
+                  end
+              end
+              
+              figure(vFStats);
+              subplot(4,cond{condID}.numFlies,flyID+(periodID-1)*cond{condID}.numFlies);
+              hold on;
+              h2 = histogram(allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.trial{trialID}.vF,...
+                  vFBins);
+              h2.FaceColor = [1 0.5 0];
+              h2.EdgeColor = [0.2*trialID 0.2*trialID 0.2*trialID];
+              h2.FaceAlpha = 0.2;
+              xlim([0 2]);
+              if periodID < 3
+                  ylim([0 500]);
+              else
+                  ylim([0 250]);
+              end
+              if flyID == 1
+                  if periodID == 1 & trialID == 1
+                    text(-0.25,600,cond{condID}.name);
+                  end
+                  ylabel(strcat(allAct{condID}.fly{flyID}.color{colorID}.period{periodID}.type,'-counts'));
+              end
+              if trialID == 1 
+                  if periodID == 1
+                      title(strcat('fly #',num2str(flyID)));
+                  elseif periodID == 4
+                      xlabel('vF (rad/s)');
+                  end
+              end
+          end
+      end
+   end
+   
+    set(vRStats,'PaperPositionMode','manual','PaperOrientation','landscape','PaperUnits','inches','PaperPosition',[0 0 11 8.5]);
+    print(vRStats,strcat('C:\Users\turnerevansd\Documents\RawAnalysis\RSS2191G20739\',...
+        allAct{condID}.name,'\',allAct{condID}.name,'_vRStats'),'-dpdf');
+    
+    set(vFStats,'PaperPositionMode','manual','PaperOrientation','landscape','PaperUnits','inches','PaperPosition',[0 0 11 8.5]);
+    print(vFStats,strcat('C:\Users\turnerevansd\Documents\RawAnalysis\RSS2191G20739\',...
+        allAct{condID}.name,'\',allAct{condID}.name,'_vFStats'),'-dpdf');
 end
 
 %% Run a regression with the peak maximum against the forward and rotational velocities - for each trial
@@ -2029,3 +2119,7 @@ end
 
 set(bumpPer,'PaperPositionMode','manual','PaperOrientation','landscape','PaperUnits','inches','PaperPosition',[0 0 11 8.5]);
 print(bumpPer,strcat('C:\Users\turnerevansd\Documents\RawAnalysis\RSS2191G20739\PersistenceSummary'),'-dpdf');
+
+%% Plot bump offsets
+
+%% Look closely at relative activity around turns, forward walking bouts
