@@ -1,9 +1,11 @@
-function offset = getOffset(vec1s, vec2s, diameter)
-%%given a list of directions of vectors at timepoints, finds the offset in
-%%radians
+function offset = getOffset(vec1s, vec2s, circumference)
+%%given two list of directions of vectors at the same timepoints, returns a
+%%vector of the CCW offsets in radians. Also requires a circumference argument as the
+%%offset is always considered to be the shortest path along the circle.
+%%Offset FROM vec2s TO vec1s (i.e. vec1s-vec2s)
 
 
-offset = [];
+offset = zeros(length(vec1s), 1);
 
 for i = 1:length(vec1s);
     a = vec1s(i);
@@ -11,15 +13,15 @@ for i = 1:length(vec1s);
     
     dif = abs(a - b);
     
-    if dif <= diameter/2
-        offset = [ offset a-b ];
+    if dif <= circumference/2 %this is already shortest path, return simple difference
+        offset(i) = a-b;
         
-    else
-        if b > a
-            offset = [ offset a+diameter-b ];
+    else %need to go the other way around the circle
+        if b > a %positive offset the other way around
+            offset(i) = a+circumference-b;
             
-        else
-            offset = [ offset a-(b+diameter) ];
+        else %negative offset the other way around
+            offset(i) = a-(b+circumference);
     
         end
     end

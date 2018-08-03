@@ -1,26 +1,26 @@
-function [mG, stdG, mR, stdR ] = alignEB(dat1, dat2, n1, n2)
+function [mG, stdG, mR, stdR ] = alignEB(dat1, dat2)
+%given two single trials for single flies, aligns trial 1 and trial 2 to the
+%max of trial 1 (at index 9) and returns the mean and standard deviation at
+%each position
 
-%datG = flipud(dat.GROIaveMax); %we're numbering from 1 at L9 to 18 at R9 on Tanya's diagram
-%datR = flipud(dat.RROIaveMax); %this means CCW rotation (+ve vrot) gives higher numbers
 
-
-
-Gal = [];
-Ral = [];
 
 s = size(dat1);
 
-for i = 1:s(2);
+Gal = zeros(s(1),s(2));
+Ral = zeros(s(1),s(2));
 
-    G = dat1(:,i);
+for i = 1:s(2); %go over each timepoint
+
+    G = dat1(:,i);%get the vectors
     R = dat2(:,i);
     newG = G;
     newR = R;
     
-    [val idx] = max(G);
-    shift = 9-idx;
+    [~, idx] = max(G);
+    shift = 9-idx;%this is how much we need to shift stuff
     
-    for j = 1:16
+    for j = 1:16 %shift each element of the green and red vectors
         k = j+shift;
         
         if k > 16
@@ -35,20 +35,18 @@ for i = 1:s(2);
         end    
     end
     
-    Gal(:,i) = newG;
+    Gal(:,i) = newG; %update data
     Ral(:,i) = newR;
 end
 
 
-mG = [];
-stdG = [];
-mR = [];
-stdR = [];
+mG = mean(Gal, 2)'; %mean green intensity
+stdG = zeros(1,16);
+mR = mean(Ral, 2)';
+stdR = zeros(1,16);
 
 
 for i = 1:16
-    mG = [mG mean(Gal(i,:))];
-    stdG = [stdG std(Gal(i,:))];
-    mR = [mR mean(Ral(i,:))];
-    stdR = [stdR std(Ral(i,:))];
+    stdG(i) = std(Gal(i,:)); %get std at each position
+    stdR(i) = std(Ral(i,:));
 end

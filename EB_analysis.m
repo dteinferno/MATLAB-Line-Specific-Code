@@ -1,24 +1,9 @@
 function EB_analysis(dir, green, red)
-
-%dir = '~/Documents/Imaging/Data_Dan/PEN2_G_PEG_R_EB/';
-%green = 'PEN2';
-%red = 'PEG';
-
-%dir = '~/Documents/Imaging/Data_Dan/PEN1_G_EPG_R_EB/';
-%green = 'PEN1';
-%red = 'EPG';
-
-%dir = '~/Documents/Imaging/Data_Dan/EPG_G_GE_R_EB/';
-%green = 'EPG';
-%red = 'GE';
-
-%dir = '~/Documents/Imaging/Data_Dan/PEN2_G_EPG_R_EB/';
-%green = 'PEN2';
-%red = 'EPG';
-
-%dir = '~/Documents/Imaging/Data_Dan/PEN2_R_EPG_G_EB/';
-%green = 'EPG';
-%red = 'PEN2';
+%Given a directory in which to save files and the names of red and green channels, calls function
+%to plot preliminary data against time. Also produces boxplots of Green/Red offset &
+%high/low vRot activity across trials
+%If FlyDatLoad has already been run and data saved in dir, loads this - otherwise
+%run FlyDatLoad
 
 try
     from_file = load(strcat(dir, 'cont'), 'alldata');
@@ -30,13 +15,13 @@ catch
     save(strcat(dir, 'cont'), 'alldata');
 end
 
-offset_neg = [] %offset green minus red at negative vrot (CW)
-std_neg = []
-offset_pos = [] %offset green minus red at postitive crot (CCW)
-std_pos = []
-actG = [] %the magnitude of the vector sum of green activity for |vrot| > pi/2 vs all vrot
-actR = []
-slopes = []
+offset_neg = []; %offset green minus red at negative vrot (CW)
+std_neg = [];
+offset_pos = []; %offset green minus red at postitive crot (CCW)
+std_pos = [];
+actG = []; %the magnitude of the vector sum of green activity for |vrot| > pi/2 vs all vrot
+actR = [];
+slopes = [];
 
 
 for i = 1:length(alldata{1}.allFlyData);
@@ -44,22 +29,22 @@ for i = 1:length(alldata{1}.allFlyData);
     fly = alldata{1}.allFlyData{i};
     
     try
-        L = length(fly.Dark)
+        L = length(fly.Dark);
     catch
-        L = length(fly.All)
+        L = length(fly.All);
     end
     
     for j = 1:L;
         
         try
-            trial = fly.Dark{j}
+            trial = fly.Dark{j};
         catch
-            trial = fly.All{j}
+            trial = fly.All{j};
         end
         
         if length(trial) > 0 & max(trial.positionDatMatch.vF) > 0
 
-            [a,b,c,d,e,f g] = plot_vel_Kris(trial, green, red, i, j, dir)
+            [a,b,c,d,e,f, g] = plot_vel_Kris(trial, green, red, i, j, dir);
 
             offset_neg = [offset_neg a];
             std_neg = [std_neg b];

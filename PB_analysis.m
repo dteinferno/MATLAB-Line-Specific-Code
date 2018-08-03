@@ -1,51 +1,36 @@
 function PB_analysis(dir, green, red)
+%Given a directory in which to save files and the names of red and green channels, calls function
+%to plot preliminary data against time. Also produces boxplots of Green/Red offset &
+%high/low vRot activity across trials. Does this for right and left PB
+%If FlyDatLoad has already been run and data saved in dir, loads this - otherwise
+%run FlyDatLoad
 
 cd ~/Documents/Imaging/Data_Dan
 
-%dir = '~/Documents/Imaging/Data_Dan/PEN1_G_EPG_R_PB/';
-%green = 'PEN1';
-%red = 'EPG';
-
-%dir = '~/Documents/Imaging/Data_Dan/PEN2_G_PEG_R_PB/';
-%green = 'PEN2';
-%red = 'PEG';
-
-%dir = '~/Documents/Imaging/Data_Dan/PEN2_R_EPG_G_PB/';
-%green = 'EPG';
-%red = 'PEN2';
-
-%dir = '~/Documents/Imaging/Data_Dan/D7_R_EPG_G_PB/';
-%green = 'EPG';
-%red = 'D7';
-
-%dir = '~/Documents/Imaging/Data_Dan/D7_G_EPG_R_PB/';
-%green = 'D7';
-%red = 'EPG';
-
-try
+try %check for flydatload-generated container
     from_file = load(strcat(dir, 'cont'), 'alldata');
     alldata=from_file.alldata;
     
 catch
 
-    alldata = FlyDatLoad(2, 'PB');
+    alldata = FlyDatLoad(2); %get data
     save(strcat(dir, 'cont'), 'alldata');
 end
 
 
 
-ominusR = [] %offset green minus red at negative vrot (CW)
-oplusR = []
-ominusL = [] %offset green minus red at postitive crot (CCW)
-oplusL = []
-oAbsR = [] %the magnitude of the vector sum of green activity for |vrot| > pi/2 vs all vrot
-oAbsL = []
-actgR = []
-actrR = []
-actgL = []
-actrL = []
+ominusR = []; %offset green minus red at negative vrot (CW)
+oplusR = [];
+ominusL = []; %offset green minus red at postitive crot (CCW)
+oplusL = [];
+oAbsR = []; %the magnitude of the vector sum of green activity for |vrot| > pi/2 vs all vrot
+oAbsL = [];
+actgR = [];
+actrR = [];
+actgL = [];
+actrL = [];
 
-slopes = []
+slopes = [];
 
 
 for i = 1:length(alldata{1}.allFlyData);
@@ -66,8 +51,8 @@ for i = 1:length(alldata{1}.allFlyData);
             trial = fly.All{j};
         end
         
-        if length(trial) > 0 & max(trial.positionDatMatch.vF) > 0 &...
-                min(trial.positionDatMatch.vRot) < - 1.5*pi/2 &  max(trial.positionDatMatch.vRot) > 1.5*pi/2
+        if length(trial) > 0 & max(trial.positionDatMatch.vF) > 0 &...%only consider trials with sufficient movement
+                min(trial.positionDatMatch.vRot) < - 1.5*pi/2 &  max(trial.positionDatMatch.vRot) > 1.5*pi/2 
 
             [a,b,c,d,e,f, g, h, k, l, m] = plot_PB_Kris(trial, green, red, i, j, dir);
             
@@ -96,14 +81,14 @@ subplot(2,2,1);
 
 data = transpose([ominusR ; ominusL ; oplusR ; oplusL]);
 
-m1 = mean(ominusR)
-s1 = std(ominusR)
-m2 = mean(ominusL)
-s2 = std(ominusL)
-m3 = mean(oplusR)
-s3 = std(oplusR)
-m4 = mean(oplusL)
-s4 = std(oplusL)
+m1 = mean(ominusR);
+s1 = std(ominusR);
+m2 = mean(ominusL);
+s2 = std(ominusL);
+m3 = mean(oplusR);
+s3 = std(oplusR);
+m4 = mean(oplusL);
+s4 = std(oplusL);
 
 boxplot(data, 'Labels',{ 'R-', 'L-', 'R+', 'L+'}, 'Whisker', 5)
 
@@ -116,10 +101,10 @@ subplot(2,2,2);
 
 data = transpose([oAbsR ; oAbsL]);
 
-m1 = mean(oAbsR)
-s1 = std(oAbsR)
-m2 = mean(oAbsL)
-s2 = std(oAbsL)
+m1 = mean(oAbsR);
+s1 = std(oAbsR);
+m2 = mean(oAbsL);
+s2 = std(oAbsL);
 
 boxplot(data, 'Labels',{sprintf('Right (%.2f+/-%.2f)',m1,s1),...
     sprintf('Left (%.2f+/-%.2f)',m2,s2)}, 'Whisker', 5)
@@ -132,14 +117,14 @@ subplot(2,2,3);
 data = transpose([actgR; actgL ; actrR ; actrL]);
 
 
-m1 = mean(actgR)
-s1 = std(actgR)
-m2 = mean(actgL)
-s2 = std(actgL)
-m3 = mean(actrR)
-s3 = std(actrR)
-m4 = mean(actrL)
-s4 = std(actrL)
+m1 = mean(actgR);
+s1 = std(actgR);
+m2 = mean(actgL);
+s2 = std(actgL);
+m3 = mean(actrR);
+s3 = std(actrR);
+m4 = mean(actrL);
+s4 = std(actrL);
 
 boxplot(data, 'Labels',{ strcat(green, 'Right'), strcat(green, 'Left'),...
     strcat(red, 'Right'), strcat(red, 'Left')}, 'Whisker', 5)
@@ -153,10 +138,10 @@ subplot(2,2,4);
 
 data = transpose([slopes( mod(1:length(slopes), 2)==0 ); slopes( mod(1:length(slopes), 2)==1 )]);
 
-m1 = mean(data(:,1))
-s1 = std(data(:,1))
-m2 = mean(data(:,2))
-s2 = std(data(:,2))
+m1 = mean(data(:,1));
+s1 = std(data(:,1));
+m2 = mean(data(:,2));
+s2 = std(data(:,2));
 
 boxplot(data, 'Labels',{ sprintf('Right (%.2f+/-%.2f)',m1,s1),...
     sprintf('Left (%.2f+/-%.2f)',m2,s2)}, 'Whisker', 5)

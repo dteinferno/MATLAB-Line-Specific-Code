@@ -1,31 +1,13 @@
 function scatterVelEB(dir, green, red)
+%given a directory in which to dump files and names of green & red channels
+%(i.e. celltype),  makes scatterplots and violinplots of closedloop data
+%(vR, vF, intensity, |PVA|). Requires the 'distributionPlot' package.
 
-%dir = '~/Documents/Imaging/Data_Dan/PEN2_G_PEG_R_EB/';
-%green = 'PEN2';
-%red = 'PEG';
-
-%dir = '~/Documents/Imaging/Data_Dan/PEN1_G_EPG_R_EB/';
-%green = 'PEN1';
-%red = 'EPG';
-
-%dir = '~/Documents/Imaging/Data_Dan/EPG_G_GE_R_EB/';
-%green = 'EPG';
-%red = 'GE';
-
-%dir = '~/Documents/Imaging/Data_Dan/PEN2_G_EPG_R_EB/';
-%green = 'PEN2';
-%red = 'EPG';
-
-%dir = '~/Documents/Imaging/Data_Dan/PEN2_R_EPG_G_EB/';
-%green = 'EPG';
-%red = 'PEN2';
-
-try
+try %if we've already run FlyDatLoad we load the previous data
     from_file = load(strcat(dir, 'cont'), 'alldata');
     alldata=from_file.alldata;
     
-catch
-
+catch %if not, we do it now and store data
     alldata = FlyDatLoad(2, 'EB');
     save(strcat(dir, 'cont'), 'alldata');
 end
@@ -34,17 +16,17 @@ end
 
 cd ~/Documents/Imaging/Data_Dan
 
-vels = { [0 0 pi/6 pi/3 2*pi/3 20], [0 0 0.2 0.5 1 20]};
+vels = { [0 0 pi/6 pi/3 2*pi/3 20], [0 0 0.2 0.5 1 20]}; %bin rotational and forward velocities
 
-for i = 1:length(alldata{1}.allFlyData);
+for i = 1:length(alldata{1}.allFlyData); %iterate over flies
 
     fly = alldata{1}.allFlyData{i};
-            
+    %we pool data by fly
     data = { [] [] [] [] [] [] };
     names = {'vRot' 'vF' strcat('intensity ', green) strcat('intensity ', red),...
-    strcat('|PVA| ', green) strcat('|PVA| ', red) };
+    strcat('|PVA| ', green) strcat('|PVA| ', red) }; %for later use in labelling diagrams
     
-    try
+    try%we may not have consistent nomenclature
         L = length(fly.Dark);
     catch
         L = length(fly.All);
@@ -58,14 +40,16 @@ for i = 1:length(alldata{1}.allFlyData);
             trial = fly.All{j}
         end
    
-        if length(trial) > 0 & max(trial.positionDatMatch.vF) > 0
+        if length(trial) > 0 & max(trial.positionDatMatch.vF) > 0 %discard trials where fly stands still throughout
             
-            datG = trial.GROIaveMax-1; %which way around does the numbering go???
+            %get imaging and velocity data
+            datG = trial.GROIaveMax-1; %numbering is counterclockwise?
             datR = trial.RROIaveMax-1; 
-            vR = trial.positionDatMatch.vRot( trial.positionDatMatch.Closed(1:length(trial.positionDatMatch.vRot))== 1 )
-            vF = trial.positionDatMatch.vF( trial.positionDatMatch.Closed(1:length(trial.positionDatMatch.vRot))== 1 )
+            vR = trial.positionDatMatch.vRot( trial.positionDatMatch.Closed(1:length(trial.positionDatMatch.vRot))== 1 );
+            %discard open loop data for now
+            vF = trial.positionDatMatch.vF( trial.positionDatMatch.Closed(1:length(trial.positionDatMatch.vRot))== 1 );
             
-            smooth = 3
+            smooth = 3 %smoothing by averaging at this stage, have gone over to SG smoothing, may want to rewrite
             if smooth > 0
                 s = size(datG);
                 s = s(1);
@@ -84,54 +68,52 @@ for i = 1:length(alldata{1}.allFlyData);
                 datR = newR;    
             end
             
-            intG = sum(datG,1)
-            intR = sum(datR,1)
+            intG = mean(datG,1); %get the mean intensities (mean dF/F across ROIs)
+            intR = mean(datR,1);
             
             %getmagnitude of PVAs
-            mG = []
-            mR = []
+            mG = zeros(1, length(intG));
+            mR = zeros(1, length(intG));
             for ind = 1:length(intG);
                 vecG = datG(:, ind);
                 vecR = datR(:, ind);
                 
-                [dGi, mGi] = getVecSum( vecG );
-                mG = [mG, mGi/sum(abs(vecG))];
+                [~, mGi] = getVecSum( vecG );
+                mG(i) = mGi/sum(abs(vecG)); %add normalized PVA magnitude
 
-                [dRi, mRi] = getVecSum( vecR );
-                mR = [mR, mRi/sum(abs(vecR))];
+                [~, mRi] = getVecSum( vecR );
+                mR(i) = mRi/sum(abs(vecR));
             end
             
-            vR = abs(vR)
-            vF = abs(vF)
-            intG = intG(1:length(vR))
-            intR = intR(1:length(vR))
-            mG = mG(1:length(vR))
-            mR = mR(1:length(vR))
+            vR = abs(vR); %looking at EB, use magnitude of velocities
+            vF = abs(vF);
+            intG = intG(1:length(vR)); %only take data for which we have velocities
+            intR = intR(1:length(vR));
+            mG = mG(1:length(vR));
+            mR = mR(1:length(vR));
             
-            data{1} = [data{1} vR]%( mG > 0 & mR > 0 & mG < 3 & mR < 3)]
-            data{2} = [data{2} vF]%( mG > 0 & mR > 0 & mG < 3 & mR < 3)]
-            data{3} = [data{3} intG]%( mG > 0 & mR > 0 & mG < 3 & mR < 3)]
-            data{4} = [data{4} intR]%( mG > 0 & mR > 0 & mG < 3 & mR < 3)]
-            data{5} = [data{5} mG]%( mG > 0 & mR > 0 & mG < 3 & mR < 3)]
-            data{6} = [data{6} mR]%( mG > 0 & mR > 0 & mG < 3 & mR < 3)]
+            %add data for trial to pooled data for fly
+            data{1} = [data{1} vR];
+            data{2} = [data{2} vF];
+            data{3} = [data{3} intG];
+            data{4} = [data{4} intR];
+            data{5} = [data{5} mG];
+            data{6} = [data{6} mR];
             
         end
     end
     
     %% Plot scatterplots
-    name = strcat(dir, sprintf('fly%d_', i));
-    for j=1:2
-        if i == 1
-            fig = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off')
-        else
-            fig = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off')
-        end
+    name = strcat(dir, sprintf('fly%d_', i)); %save to dict labelled by flyID
+    for j=1:2 %iterate over vRot and vF on x axis
         
+        fig = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off') %make scatterplot
+
         %iterate over green and red
         for k=1:2
             subplot(2, 2, 2*k-1)
             
-            scatter(data{j}, data{2*k+1}, 3, 'filled')
+            scatter(data{j}, data{2*k+1}, 3, 'filled') %intensities
             
             xlabel(names{j})
             ylabel(names{2*k+1})
@@ -139,21 +121,17 @@ for i = 1:length(alldata{1}.allFlyData);
             
             subplot(2, 2, 2*k)
             
-            scatter(data{j}, data{2*k+2}, 3, 'filled')
+            scatter(data{j}, data{2*k+2}, 3, 'filled') %magnitudes
             
             xlabel(names{j})
             ylabel(names{2*k+2})
             
         end         
-        print(fig, strcat(name, strcat('scatter_', names{j})), '-dpdf');
+        print(fig, strcat(name, strcat('scatter_', names{j})), '-dpdf'); %save to dict
         
-        if i == 1
-            box = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off')
-        else
-            box = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off')
-        end
-        %set(box, 'DefaultTextFontSize', 4);
-        for k=1:4 %iterate over red and green
+        box = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off') %make boxplot
+
+        for k=1:4 %iterate over (vRot, vF) x (grenn, red)
             subplot(4, 1, k)
             
             boxdat = [];
@@ -162,29 +140,29 @@ for i = 1:length(alldata{1}.allFlyData);
             distDat = [];%
             for m = 1:length(vels{j})-1
                 if m == 1
-                    dat = data{k+2}( data{j} == 0 );
-                    dat0 = dat;
+                    dat = data{k+2}( data{j} == 0 ); %find staitonary data
+                    dat0 = dat;% store stationary data for comparison
                     ps = [1];
-                    groups = [ zeros(length(dat), 1) ];
+                    groups = zeros(length(dat), 1); %group for plotting
                 else
-                    dat = data{k+2}( data{j} > vels{j}(m) & data{j} <= vels{j}(m+1) );
+                    dat = data{k+2}( data{j} > vels{j}(m) & data{j} <= vels{j}(m+1) ); %get data in velocity bin
                     if length(dat) > 0
-                        groups = vertcat( groups, (m-1)*ones(length(dat),1) );
+                        groups = vertcat( groups, (m-1)*ones(length(dat),1) ); %add to groupings
                     end
                     
                 end
                 
                 if length(dat) > 0
                     vertcat(distDat, dat);%
-                    [r, p] = ttest2(dat, dat0, 'Tail', 'both', 'Vartype', 'unequal')
-                    xlabs = [xlabs length(dat) p];
+                    [r, p] = ttest2(dat, dat0, 'Tail', 'both', 'Vartype', 'unequal') %run ttest relative to stationary data
+                    xlabs = [xlabs length(dat) p]; %construct xlabels
                     if k==1 || k==2
-                        dat = dat / mean(dat0);
+                        dat = dat / mean(dat0); %normalize intensities
                     end
                     boxdat = [boxdat dat];
                     M = mean(dat);
                     dev = std(dat);
-                    labels{m} = sprintf('%.2f m=%.2f(%.2f)', vels{j}(m+1), M, dev);
+                    labels{m} = sprintf('%.2f m=%.2f(%.2f)', vels{j}(m+1), M, dev); %update labels with some info on the data
                 end
             end
 
@@ -194,17 +172,15 @@ for i = 1:length(alldata{1}.allFlyData);
             end
 
             distributionPlot(transpose(boxdat), 'groups', transpose(groups), 'color', 'b',...
-                'showMM', 5, 'xNames', labels)
+                'showMM', 5, 'xNames', labels) %make violin plot
             ylim( [0 max(boxdat)] )
             set(gca,'FontSize',8);
-            %boxplot(boxdat, groups, 'Labels',labels, 'Whisker', 5)
-            %set(findobj(gca,'Type','text'),'FontSize',18)
             xlabel( sprintf(xlab, xlabs), 'fontsize', 9)
             title(names{k+2}, 'FontSize', 16) 
             
         end
         box.PaperUnits = 'inches';
         box.PaperPosition = [0 0 8 11.5];
-        print(box, strcat(name, strcat('violin_', names{j})), '-dpdf');
+        print(box, strcat(name, strcat('violin_', names{j})), '-dpdf'); %save violinplot
     end
 end

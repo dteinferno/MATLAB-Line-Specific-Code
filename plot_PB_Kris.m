@@ -1,9 +1,13 @@
 function [ominusR, oplusR, ominusL, oplusL, oAbsR, oAbsL, actgR, actrR, actgL, actrL, slopes] = plot_PB_Kris(dat, green, red, fly, trial, dir)
+%given a single trial for a single fly in the PB, plots preliminary data: heading vs green/red directions, vR/vF vs.
+%green and red intensity and vector sum magnitude (NOT normalized), vRot vs offset.
+%Also makes boxplots of intensity & offset, and scatterplots of green/red offset vs vRot as
+%well as the rate of change of the direction of the green/red vector sum vs. vRot.
+%Does all of this for the 'complete' dataset and for thresholded data by
+%the magnitude of the green and red vector sums.
+%Does this for left and right PB
 
-%%make a script for plot velocity, G and R as a function of t
-
-%cond = FlyDatLoad(2)
-%dat = cond{1}.allFlyData{1}.('Dark'){1}
+%% Extract and process data
 
 vR = dat.positionDatMatch.vRot( dat.positionDatMatch.Closed(1:length(dat.positionDatMatch.vRot)) == 1 ) ; %CCW velocity
 vF = dat.positionDatMatch.vF(dat.positionDatMatch.Closed(1:length(dat.positionDatMatch.vF))== 1); %forward velocity
@@ -11,29 +15,20 @@ vF = dat.positionDatMatch.vF(dat.positionDatMatch.Closed(1:length(dat.positionDa
 
 ts = dat.positionDatMatch.OffsetRotMatch(:,1);
 ts = ts(dat.positionDatMatch.Closed== 1);
-%ts = ts(1:L); %timepoints for which we have v
 
 L = length(dat.GROIaveMax);
 
 heading = dat.positionDatMatch.PosRotMatch(1:L) * pi/180;
-heading = heading(dat.positionDatMatch.Closed== 1)%CCW is positive
+heading = heading(dat.positionDatMatch.Closed== 1);%CCW is positive
 
 datG = flipud(dat.GROIaveMax)-1; %we're numbering from 1 at L9 to 18 at R9 on Tanya's diagram
 datR = flipud(dat.RROIaveMax)-1; %this means CCW rotation (+ve vrot) gives higher numbers
 
-size(datG);
-
 s = size(datG);
 s = s(1);
 
-mG = []; %magnitude of vector sum of green EB activity
-mR = [];
-
-dG = []; %direction of vector sum
-dR = [];
-
-smooth = 3
-
+smooth = 3;
+%should change to SG filtering
 if smooth > 0
     display('smoothening data');
     ts = Smooth(ts, smooth);
@@ -50,29 +45,24 @@ if smooth > 0
         %newR(i,:) = Smooth(datR(i,:), smooth);
     end
     datG = newG;
-    datR = newR;
-        
-    
+    datR = newR; 
 end
 
-L = length(datG);
+[mGl, mGr, dGl, dGr] = getPBVec(datG); %get vector magnitudes and direction
+[mRl, mRr, dRl, dRr] = getPBVec(datR);
 
-[mGl, mGr, dGl, dGr] = getPBVec(datG)
-[mRl, mRr, dRl, dRr] = getPBVec(datR)
-
-mGt = mGr+mGl
-mRt = mRr+mRl
+mGt = mGr+mGl; %total intensities across PB
+mRt = mRr+mRl;
 
 L = length(vR); %number of data points we have velocity for
 
 %%prune away stuff with too low intensity
 
-prune = 0.20
+prune = 0.20;
 
 if prune > 0
     rlim = prune*mean(mRt);
     glim = prune*mean(mGt);
-    
 
     tp = ts( mRt > rlim );
     vRp = vR( mRt(1:end-1) > rlim );
@@ -100,11 +90,11 @@ if prune > 0
 end
 
 
-rGr = getRates(dGr, ts, 9);%, tGs) %rate of change of direction of Green vector sum. +ve is moving to the right in the PB (e.g. CCW fly rotation)
-rRr = getRates(dRr, ts, 9);%, tRs) %rate of change of direction of Red vector sum
-rGrp = getRates(dGrp, tp, 9);
+rGr = getRates(dGr, ts, 9);%rate of change of direction of Green vector sum. +ve is moving to the right in the PB (e.g. CCW fly rotation)
+rRr = getRates(dRr, ts, 9);%rate of change of direction of Red vector sum
+rGrp = getRates(dGrp, tp, 9);%pruned
 rRrp = getRates(dRrp, tp, 9);
-rGl = getRates(dGl, ts, 9);
+rGl = getRates(dGl, ts, 9);%left PB
 rRl = getRates(dRl, ts, 9);
 rGlp = getRates(dGlp, tp, 9);
 rRlp = getRates(dRlp, tp, 9);
@@ -121,10 +111,10 @@ mRl = mRl(1:L);
 ts = ts(1:L);
 heading = heading(1:L);
 
-offsetr = getOffset(dGr, dRr, 9); %get offset of green relative to red
-offsetrp = getOffset(dGrp, dRrp, 9);
-offsetl = getOffset(dGl, dRl, 9);
-offsetlp = getOffset(dGlp, dRlp, 9);
+offsetr = getOffset(dGr, dRr, 9)'; %get offset of green relative to red
+offsetrp = getOffset(dGrp, dRrp, 9)'; %pruned
+offsetl = getOffset(dGl, dRl, 9)'; %left
+offsetlp = getOffset(dGlp, dRlp, 9)';
 
 %% plot raw data
 
@@ -154,11 +144,6 @@ xlim(hAx(1), [ ts(1) ts(end) ] )
 xlim(hAx(2), [ ts(1) ts(end) ] )
 set(hAx,{'ycolor'},{'k';'k'})
 
-size(ts)
-size(mGr)
-size(mGl)
-size(mRr)
-size(mRl)
 
 %%forward velocity
 subplot(3,1,2);
@@ -299,74 +284,44 @@ legend({'Right', 'Left', 'vRot'});
 
 
 %% Boxplots
+%only do this for pruned data
 
-%we're looking at velocity so remove  bits where the fly is standing still
-
-xmin = min(vR)
-xmax = max(vR)
+xmin = min(vR);
+xmax = max(vR);
 
 newact2 = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off');
 
-%include = [ abs(vR) > 0.1 ]
-%vR = vR(include)
-%offset = offset(include)
-%rR = rR(include)
-%rG = rG(include)
-%{
 subplot(2,2,1);
 
-scatter(vR, offset)
-xlabel('vRot')
-ylabel('Offset G-R')
-
-p1 = polyfit(vR,offset,1)
-yfit1 = polyval(p1,vR);
-yresid = offset - yfit1;
-SSresid = sum(yresid.^2);
-SStotal = (length(offset)-1) * var(offset);
-rsq1 = 1 - SSresid/SStotal
-
-legend( {sprintf('Offset G-R slope %.2f R2 %.2f', p1(1), rsq1)} )
-hold on
-plot(vR, yfit1)
-xlim([xmin xmax])
-%}
-
-subplot(2,2,1);
-
-%include = (abs(vRp) > 0.1)
-%vRp = vRp(include)
-%offsetp = offsetp(include)
-%rRp = rRp(include)
-%rGp = rGp(include)
-
-scatter(vRp, offsetrp(1:length(vRp)), 'b')
+scatter(vRp, offsetrp(1:length(vRp)), 'b') %right offset
 xlabel('vR')
 ylabel('Offset G-R')
 
-p1 = polyfit(vRp,offsetrp(1:length(vRp)),1)
+size(vRp)
+size(offsetrp)
+
+p1 = polyfit(vRp,offsetrp(1:length(vRp)),1);
 yfit1 = polyval(p1,vRp);
 yresid = offsetrp(1:length(vRp)) - yfit1;
 SSresid = sum(yresid.^2);
 SStotal = (length(offsetrp)-1) * var(offsetrp);
-rsq1 = 1 - SSresid/SStotal
+rsq1 = 1 - SSresid/SStotal;
 
-slopes = [p1(1)]
+slopes = [p1(1)];
 
 hold on
 
-
-scatter(vRp, offsetlp(1:length(vRp)), 'c')
+scatter(vRp, offsetlp(1:length(vRp)), 'c') %left offset
 xlabel('vR')
 
-p2 = polyfit(vRp,offsetlp(1:length(vRp)),1)
+p2 = polyfit(vRp,offsetlp(1:length(vRp)),1);
 yfit2 = polyval(p1,vRp);
 yresid = offsetlp(1:length(vRp)) - yfit1;
 SSresid = sum(yresid.^2);
 SStotal = (length(offsetlp)-1) * var(offsetlp);
-rsq2 = 1 - SSresid/SStotal
+rsq2 = 1 - SSresid/SStotal;
 
-slopes = [slopes p2(1)]
+slopes = [slopes p2(1)];
 
 legend( {sprintf('Offset G-R R slope %.2f R2 %.2f', p1(1), rsq1),...
     sprintf('Offset G-R L slope %.2f R2 %.2f', p2(1), rsq2)} )
@@ -375,48 +330,8 @@ plot(vRp, yfit1, 'b')
 plot(vRp, yfit2, 'c')
 xlim([xmin xmax])
 
-%{
-subplot(2,2,3)
 
-scatter(vR(1:length(rR)), rRr, 'r')
-hold on
-scatter(vR(1:length(rG)), rGr, 'g')
-
-legend( {'EPG', 'PEN1'} )
-xlabel('vR')
-ylabel('Rate of change of fluorescence direction')
-
-p1 = polyfit(vR(1:length(rR)),rR,1);
-yfit1 = polyval(p1,vR(1:length(rR)));
-yresid = rR - yfit1;
-SSresid = sum(yresid.^2);
-SStotal = (length(rR)-1) * var(rR);
-rsq1 = 1 - SSresid/SStotal;
-
-scatter(vR(1:length(rR)), rR, 'r')
-hold on
-scatter(vR(1:length(rG)), rG, 'g')
-
-legend( {'EPG', 'PEN1'} )
-xlabel('vR')
-ylabel('Rate of change of fluorescence direction')
-
-p2 = polyfit(vR(1:length(rR)),rG,1);
-yfit2 = polyval(p2,vR(1:length(rR)));
-yresid = rG - yfit2;
-SSresid = sum(yresid.^2);
-SStotal = (length(rG)-1) * var(rG);
-rsq2 = 1 - SSresid/SStotal;
-
-legend( {sprintf('Red slope %.2f R2 %.2f', p1(1), rsq1), sprintf('Green slope %.2f R2 %.2f', p2(1), rsq2)} )
-hold on
-plot(vR(1:length(rR)), yfit1, 'r')
-plot(vR(1:length(rR)), yfit2, 'g')
-xlim([xmin xmax])
-%}
-
-subplot(2,2,2)
-
+subplot(2,2,2) %rate of change of fluorescence direction right PB
 
 scatter(vRp(1:length(rRrp)), rRrp, 'r')
 hold on
@@ -445,10 +360,7 @@ plot(vRp(1:length(rRrp)), yfit1, 'r')
 plot(vRp(1:length(rRlp)), yfit2, 'g')
 xlim([xmin xmax])
 
-
-
-subplot(2,2,3)
-
+subplot(2,2,3) %rate of change of fluorescence direction left PB
 
 scatter(vRp(1:length(rRlp)), rRlp, 'r')
 hold on
@@ -478,18 +390,18 @@ xlim([xmin xmax])
 
 %% return data
 
-cutoff = pi/3
+cutoff = pi/3;
 
-ominusR = mean(offsetrp( vRp < -cutoff ))
-oplusR = mean(offsetrp( vRp > cutoff ))
+ominusR = mean(offsetrp( vRp < -cutoff )); %offset at +ve vs. -ve velocities
+oplusR = mean(offsetrp( vRp > cutoff ));
 
-ominusL = mean(offsetlp( vRp < -cutoff ))
-oplusL = mean(offsetlp( vRp > cutoff ))
+ominusL = mean(offsetlp( vRp < -cutoff ));
+oplusL = mean(offsetlp( vRp > cutoff ));
 
-oAbsR = mean(abs(offsetrp))
+oAbsR = mean(abs(offsetrp)) %magnitude of offset
 oAbsL = mean(abs(offsetlp))
 
-actgR = mean( mGr( abs(vR) > cutoff )) / mean( mGr( abs(vR) < cutoff ))
+actgR = mean( mGr( abs(vR) > cutoff )) / mean( mGr( abs(vR) < cutoff )) %intensity at high over low rotational velocities
 actrR = mean( mRr( abs(vR) > cutoff )) / mean( mRr( abs(vR) < cutoff ))
 
 actgL = mean( mGl( abs(vR) > cutoff )) / mean( mGl( abs(vR) < cutoff ))

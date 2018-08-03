@@ -1,37 +1,28 @@
 function [magsL, magsR, dirsL, dirsR] = getPBVec(array);
 %%Return lists of magnitudes and directions
 
-magsL = [];
-magsR = [];
-dirsL = [];
-dirsR = [];
+%initialize
+magsL = zeros(length(array), 1);
+magsR = zeros(length(array), 1);
+dirsL = zeros(length(array), 1);
+dirsR = zeros(length(array), 1);
 
 s = size(array);
-
-for i = 1:s(2);
+for i = 1:s(2); %go through time points
     
    vec = array(:,i); 
-   vec(1:9);
     
-   [dirl, magl] = getVecSum( vec(1:9) );
+   [dirl, magl] = getVecSum( vec(1:9) ); %split into left and right and get magnitude and direction of vector sum
    
    [dirr, magr] = getVecSum( vec(10:18) );
       
-   dirl = 9*dirl / (2*pi);
+   dirl = 9*dirl / (2*pi); %convert to radians
    dirr = 9 + 9*dirr / (2*pi);
    
-   magsL = [magsL magl];
-   magsR = [magsR magr];
+   magsL(i) = magl; %add to vectors
+   magsR(i) = magr;
    
-   dirsL = [dirsL dirl];
-   dirsR = [dirsR dirr];
+   dirsL(i) = dirl;
+   dirsR(i) = dirr;
    
-end
-
-magsL = transpose(magsL)
-magsR = transpose(magsR)
-dirsL = transpose(dirsL)
-dirsR = transpose(dirsR)
-    
-    
 end

@@ -1,9 +1,11 @@
 function [mminus, stdminus, mplus, stdplus, actg, actr, slope] = plot_vel_Kris(dat, green, red, fly, trial, dir)
+%given a single trial for a single fly IN THE EB, plots preliminary data: heading vs green/red directions, vR/vF vs.
+%green and red intensity and vector sum magnitude (NOT normalized), vRot vs offset.
+%Also makes boxplots of intensity & offset, and scatterplots of green/red offset vs vRot as
+%well as the rate of change of the direction of the green/red vector sum vs. vRot.
+%Does all of this for the 'complete' dataset and for thresholded data by the magnitude of the green and red vector sums.
 
-%%make a script for plot velocity, G and R as a function of t
-
-%cond = FlyDatLoad(2)
-%dat = cond{1}.allFlyData{1}.('Dark'){1}
+%% Extract and process data
 
 vR = dat.positionDatMatch.vRot( dat.positionDatMatch.Closed(1:length(dat.positionDatMatch.vRot)) == 1 ) ; %rotational velocity
 vF = dat.positionDatMatch.vF(dat.positionDatMatch.Closed(1:length(dat.positionDatMatch.vF))== 1); %forward velocity
@@ -11,29 +13,20 @@ vF = dat.positionDatMatch.vF(dat.positionDatMatch.Closed(1:length(dat.positionDa
 
 ts = dat.positionDatMatch.OffsetRotMatch(:,1);
 ts = ts(dat.positionDatMatch.Closed== 1);
-%ts = ts(1:L); %timepoints for which we have v
 
 L = length(dat.GROIaveMax);
 
-heading = dat.positionDatMatch.PosRotMatch(1:L) * pi/180;
-heading = heading(dat.positionDatMatch.Closed== 1)%fly heading actually not heading but expected bump position?
+heading = dat.positionDatMatch.PosRotMatch(1:L) * pi/180; %work in radians
+heading = heading(dat.positionDatMatch.Closed== 1)
 
-datG = dat.GROIaveMax;
-datR = dat.RROIaveMax;
-
-size(datG);
+datG = dat.GROIaveMax-1;
+datR = dat.RROIaveMax-1;
 
 s = size(datG);
 s = s(1);
 
-mG = []; %magnitude of vector sum of green EB activity
-mR = [];
-
-dG = []; %direction of vector sum
-dR = [];
-
 smooth = 3
-
+%should change to SG smoothing
 if smooth > 0
     display('smoothening data');
     ts = Smooth(ts, smooth);
@@ -47,38 +40,40 @@ if smooth > 0
         newG(i,:) = Smooth(g(dat.positionDatMatch.Closed== 1), smooth);
         r = datR(i,:);
         newR(i,:) = Smooth(r(dat.positionDatMatch.Closed== 1), smooth);
-        %newR(i,:) = Smooth(datR(i,:), smooth);
     end
     datG = newG;
     datR = newR;    
 end
 
-L = length(datG);
+mG = zeros(L, 1); %magnitude of vector sum of green EB activity
+mR = zeros(L, 1);
+
+dG = zeros(L, 1); %direction of vector sum
+dR = zeros(L, 1);
 
 for i = 1:L;
+    %get vector sum and direction for red and green channel
     
     [dGi, mGi] = getVecSum( datG(:, i) );
-    dG = vertcat(dG, dGi);
-    mG = vertcat(mG, mGi);
+    dG(i) = dGi;
+    mG(i) = mGi;
     
     [dRi, mRi] = getVecSum( datR(:, i) );
-    dR = vertcat(dR, dRi);
-    mR = vertcat(mR, mRi);
+    dR(i) = dRi;
+    mR(i) = mRi; %note we use magnitude of vector sum, not normalized!
     
 end
-dR = dR-pi;
+dR = dR-pi; %work from -pi to pi
 dG = dG-pi;
 
 L = length(vR); %number of data points we have velocity for
 
-%%prune away stuff with too low intensity
-
-prune = 0.35
+%%prune away stuff with too low intensity in either channel
+prune = 0.35 %threshold is mean times prune
 
 if prune > 0
     rlim = prune*mean(mR);
-    glim = prune*mean(mG);
-    
+    glim = prune*mean(mG);   
     dGp = dG( mR > rlim );
     tp = ts( mR > rlim );
     vRp = vR( mR(1:end-1) > rlim ); 
@@ -94,12 +89,12 @@ if prune > 0
 end
 
 
-rG = getRates(dG, ts, 2*pi);%, tGs) %rate of change of direction of Green vector sum
-rR = getRates(dR, ts, 2*pi);%, tRs) %rate of change of direction of Red vector sum
+rG = getRates(dG, ts, 2*pi); %rate of change of direction of Green vector sum
+rR = getRates(dR, ts, 2*pi); %rate of change of direction of Red vector sum
 rGp = getRates(dGp, tp, 2*pi);
 rRp = getRates(dRp, tp, 2*pi);
 
-%cut off last value to amke copatible with our rate data
+%cut off last value to make compatible with our rate data
 dG = dG(1:L);
 dR = dR(1:L);
 mG = mG(1:L);
@@ -107,15 +102,14 @@ mR = mR(1:L);
 ts = ts(1:L);
 heading = heading(1:L);
 
-offset = getOffset(dG, dR, 2*pi); %get offset of green relative to red
-offsetp = getOffset(dGp, dRp, 2*pi);
+offset = getOffset(dG, dR, 2*pi)'; %get offset of green relative to red
+offsetp = getOffset(dGp, dRp, 2*pi)'; %repeat for pruned data
 
 %% plot raw data
 
 % Plot the profiles
 act = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off');
 
-% Plot the activity
 subplot(3,1,1);
 hold on;
 plot(ts,getCont(heading, pi),'b'); %time vs heading
@@ -141,16 +135,12 @@ xlim(hAx(1), [ ts(1) ts(end) ] )
 xlim(hAx(2), [ ts(1) ts(end) ] )
 ylim(hAx(1), [0 max( max(mR), max(mG) )])
 
-min(absvF)
-max(absvF)
-vF
-
 ylim(hAx(2), [min( absvF ) max(absvF)])
 set(hLine1,'Color','r');
 set(hLine2,'Color','k');
 legend({green, red, 'vF'});
 
-%%rotatinal velocity
+%%rotational velocity
 subplot(3,1,3);
 absvR = abs(vR);
 hold on
@@ -214,8 +204,8 @@ newact = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off'
 
 %rate of change
 subplot(2,1,1);
-ymax = max( max(vRp), abs(min(vRp)) )
-ymax2 = max( max(abs(rGp)), max(abs(rRp)))
+ymax = max( max(vRp), abs(min(vRp)) );
+ymax2 = max( max(abs(rGp)), max(abs(rRp)));
 hold on
 plot(tp(1:length(rGp)),rGp,'g'); %rate of change
 
@@ -250,18 +240,10 @@ legend({'Offset G-R', 'vR'});
 
 %% Boxplots
 
-%we're looking at velocity so remove  bits where the fly is standing still
-
 xmin = min(vR);
 xmax = max(vR);
 
 newact2 = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off');
-
-%include = [ abs(vR) > 0.1 ]
-%vR = vR(include)
-%offset = offset(include)
-%rR = rR(include)
-%rG = rG(include)
 
 subplot(2,2,1);
 
@@ -269,43 +251,38 @@ scatter(vR, offset)
 xlabel('vRot')
 ylabel('Offset G-R')
 
-p1 = polyfit(vR,offset,1)
+p1 = polyfit(vR,offset,1); %fit offset data
 yfit1 = polyval(p1,vR);
 yresid = offset - yfit1;
 SSresid = sum(yresid.^2);
 SStotal = (length(offset)-1) * var(offset);
-rsq1 = 1 - SSresid/SStotal
+rsq1 = 1 - SSresid/SStotal;
 
 legend( {sprintf('Offset G-R slope %.2f R2 %.2f', p1(1), rsq1)} )
 hold on
 plot(vR, yfit1)
 xlim([xmin xmax])
+title('pnon-runed offset data')
 
-subplot(2,2,2);
-
-%include = (abs(vRp) > 0.1)
-%vRp = vRp(include)
-%offsetp = offsetp(include)
-%rRp = rRp(include)
-%rGp = rGp(include)
+subplot(2,2,2); %pruned offset
 
 scatter(vRp, offsetp(1:length(vRp)))
 xlabel('vR')
 ylabel('Offset G-R')
 
-p1 = polyfit(vRp,offsetp(1:length(vRp)),1)
+p1 = polyfit(vRp,offsetp(1:length(vRp)),1) %fit pruned offset data
 yfit1 = polyval(p1,vRp);
 yresid = offsetp(1:length(vRp)) - yfit1;
 SSresid = sum(yresid.^2);
 SStotal = (length(offsetp)-1) * var(offsetp);
 rsq1 = 1 - SSresid/SStotal
 
-slope = p1(1)
-
 legend( {sprintf('Offset G-R slope %.2f R2 %.2f', p1(1), rsq1)} )
 hold on
 plot(vRp, yfit1)
 xlim([xmin xmax])
+title('pruned offset data')
+
 
 subplot(2,2,3)
 
@@ -317,6 +294,7 @@ legend( {'EPG', 'PEN1'} )
 xlabel('vR')
 ylabel('Rate of change of fluorescence direction')
 
+%fit both green and red channels
 p1 = polyfit(vR(1:length(rR)),rR,1);
 yfit1 = polyval(p1,vR(1:length(rR)));
 yresid = rR - yfit1;
@@ -336,9 +314,10 @@ hold on
 plot(vR(1:length(rR)), yfit1, 'r')
 plot(vR(1:length(rR)), yfit2, 'g')
 xlim([xmin xmax])
+title('un-pruned rate of change')
+
 
 subplot(2,2,4)
-
 
 scatter(vRp(1:length(rRp)), rRp, 'r')
 hold on
@@ -365,20 +344,21 @@ hold on
 plot(vRp(1:length(rRp)), yfit1, 'r')
 plot(vRp(1:length(rRp)), yfit2, 'g')
 xlim([xmin xmax])
+title('pruned rate of change')
 
 
 
 %% return data
 
-cutoff = pi/3
+cutoff = pi/3;
 
-mminus = mean(offsetp( vRp < -cutoff ))
-stdminus = std(offsetp( vRp < -cutoff ))
-mplus = mean(offsetp( vRp > cutoff ))
-stdplus = std(offsetp( vRp > cutoff ))
+mminus = mean(offsetp( vRp < -cutoff )); %mean offset
+stdminus = std(offsetp( vRp < -cutoff )); %standard deviation
+mplus = mean(offsetp( vRp > cutoff )); %pruned 
+stdplus = std(offsetp( vRp > cutoff ));
 
-actg = mean( mG( abs(vR) > cutoff )) / mean( mG( abs(vR) < cutoff ))
-actr = mean( mR( abs(vR) > cutoff )) / mean( mR( abs(vR) < cutoff ))
+actg = mean( mG( abs(vR) > cutoff )) / mean( mG( abs(vR) < cutoff )); %mean green channel activity at high vs low vRot
+actr = mean( mR( abs(vR) > cutoff )) / mean( mR( abs(vR) < cutoff )); %red channel
 
 
 %% save
