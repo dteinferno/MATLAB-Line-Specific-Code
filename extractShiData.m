@@ -47,8 +47,8 @@ function [tPts,darkPer,OLPer,CLPer,CWPer,CCWPer,DF,heading,headingPlt,vRot,vF,st
         sgolayFrames = smoothV;
         vRot = sgolayfilt(vRot,sgolayOrder,sgolayFrames);
         vF = sgolayfilt(vF,sgolayOrder,sgolayFrames);
-        heading = sgolayfilt(heading,sgolayOrder,sgolayFrames);
-        stripePos = sgolayfilt(stripePos,sgolayOrder,sgolayFrames);
+        %heading = sgolayfilt(heading,sgolayOrder,sgolayFrames);
+        %stripePos = sgolayfilt(stripePos,sgolayOrder,sgolayFrames);
     end
     
     % Convert jumps in heading or stripe position to NaNs for

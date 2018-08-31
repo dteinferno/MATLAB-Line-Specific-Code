@@ -1,4 +1,4 @@
-function data = getDataShi(cond, period, smoothF, smoothV)
+function [heading, DFs, data, flyinds] = getDataShi(cond, period, smoothF, smoothV, nWedge)
 %Given a container with data for a given experiment, as well as a period of interest, returns DF with the raw imaging data (possibly
 %smoothened) as well as a cell 'data' containing tPts, vRot, vF, intensity,
 %|PVA|, PVA direction for RT and 30C (in that order; this is a pretty silly
@@ -12,12 +12,15 @@ function data = getDataShi(cond, period, smoothF, smoothV)
 
 
 data = { [] [] [] [] [] [] [] [] [] [] [] [] };
-    
+headings = {[] []};
+DFs = {[] []};
 conds = {'All' 'All_30C'};
+flyinds = {[] []};
 
 for i = 1:length(cond{1}.allFlyData); %iterate over flies
     
     for j = 1:2; %iterate over conditions
+        flyinds{j} = [flyinds{j} length(data{6*j-2})+1];
    
         for k = 1:2 %iterate over trials
             
@@ -30,7 +33,7 @@ for i = 1:length(cond{1}.allFlyData); %iterate over flies
             [tPts,darkPer, OLPer, CLPer, CWPer, CCWPer, DF, heading, headingPlt, vRot, vF, stripePos, stripePosPlt, stripeJumps]...
                 = extractShiData(cond, i, conds{j}, ind, smoothF, smoothV); 
             
-            int = mean(DF,1); %use mean rather than sum since this actually gives a dF/F like value
+            int = mean( maxk(DF, nWedge, 1), 1); %specify how many wedges to calculate the mean over
             
             %getmagnitude of PVAs
             m = zeros(1, length(int));
@@ -66,6 +69,9 @@ for i = 1:length(cond{1}.allFlyData); %iterate over flies
             data{6*j-2} = [data{6*j-2} int(per)]; %mean fluorescent intensity
             data{6*j-1} = [data{6*j-1} m(per)]; %PVA magnitudes
             data{6*j} = [data{6*j} dirs(per)]; %PVA directions
+            
+            DFs{j} = [DFs{j} DF(:,per)];
+            headings{j} = [headings{j} DF(:,per)];
             
         end
     end

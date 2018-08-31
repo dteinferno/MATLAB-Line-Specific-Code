@@ -25,7 +25,7 @@ for per = 1:3 %loop over periods of interest
             select = (a <= vRots{j} & vRots{j} <= b); %find the indices corresponding to vRot of interest
             Gal = datas{j}(:,select); %get aligned intensity corresponding to bin
             
-            mG = mean(Gal, 2);
+            mG = mean(Gal, 2)';
             stdG = zeros(1, 16);
             for i = 1:16
                 stdG(i) = std(Gal(i,:));
@@ -35,7 +35,7 @@ for per = 1:3 %loop over periods of interest
             direcG = direcG * 16/(2*pi); %get direction in wedge units
             magG = magG / sum(abs(mG)); %get PVA magnitude
             
-            [xs, HM] = FWHM(mG); %find FWHM
+            [xs, HM] = FWHM(mG, 'min'); %find FWHM
             x1 = xs{1};
             x2 = xs{2};
             fwhm = x2-x1;
@@ -106,6 +106,6 @@ for per = 1:3 %loop over periods of interest
     
     fwhm_fig.PaperUnits = 'inches';
     fwhm_fig.PaperPosition = [0 0 8 11.5];
-    print(fwhm_fig, strcat( dir, 'fwhm_', name, '_', pers{per} ), '-dpdf'); %save
+    print(fwhm_fig, strcat( dir, 'fwhm_', name, '_', pers{per}, '_from_baseline' ), '-dpdf'); %save
     
 end

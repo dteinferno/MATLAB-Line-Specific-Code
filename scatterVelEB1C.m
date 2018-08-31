@@ -1,4 +1,4 @@
-function data = scatterVelEB1C(dir, cond, period)
+function data = scatterVelEB1C(dir, cond, period, nWedge)
 
 %Makes scatterplots and violin plots for intensity and PVA magnitude against
 %rotational velocity for dark, CL or OL visual stimulus specified by
@@ -32,7 +32,7 @@ for i = 1:length(cond{1}.allFlyData); %iterate over flies
             [tPts,darkPer, OLPer, CLPer, CWPer, CCWPer, DF, heading, headingPlt, vRot, vF, stripePos, stripePosPlt, stripeJumps]...
                 = extractShiData(cond, i, conds{j}, ind, 5, 5); 
             
-            int = mean(DF,1);
+            int = mean( maxk(DF, nWedge, 1), 1)
             
             %getmagnitude of PVAs
             m = zeros(1, length(int));
@@ -85,7 +85,7 @@ for k=1:2
     ylabel(names{3*k})
 
 end         
-print(fig, strcat(dir, 'scatter_intensity_', name, '_', period), '-dpdf');
+print(fig, strcat(dir, 'scatter_intensity', name, '_', period, '_nWedge', num2str(nWedge)), '-dpdf');
 
 %%  Plot Boxplots
 
@@ -154,5 +154,5 @@ for k=1:2 %iterate over hot and cold
 end
 box.PaperUnits = 'inches';
 box.PaperPosition = [0 0 8 11.5];
-print(box, strcat(dir, 'box_intensity_', name, '_', period), '-dpdf');
+print(box, strcat(dir, 'box_intensity', name, '_', period, '_nWedge', num2str(nWedge)), '-dpdf');
 %}

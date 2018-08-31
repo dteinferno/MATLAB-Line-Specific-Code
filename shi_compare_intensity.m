@@ -3,6 +3,8 @@
 %different shibire samples at 30C
 clear
 
+nWedge = 1
+
 dirs = { '/Users/loaner/Documents/imaging/Data_Dan/shi/empty/',...
     '/Users/loaner/Documents/imaging/Data_Dan/shi/EPG/',...
     '/Users/loaner/Documents/imaging/Data_Dan/shi/GE/',...
@@ -10,7 +12,7 @@ dirs = { '/Users/loaner/Documents/imaging/Data_Dan/shi/empty/',...
     '/Users/loaner/Documents/imaging/Data_Dan/shi/PEN2/'};
 
 
-per = 'CL'; %specify per manually
+per = 'dark'; %specify per manually
 datas = {[] [] [] []};
 
 ind = 0;
@@ -26,7 +28,7 @@ for i = [1 4 5 3] %iterate over directories of interest
         save(strcat(dir, 'cond'), 'cond');
     end
     
-    data = scatterVelEB1C(strcat(dir, 'intensities/'), cond, per); %get data by running scatterVelEB1C; also plots figures itself...
+    data = scatterVelEB1C(strcat(dir, 'intensities/'), cond, per, nWedge); %get data by running scatterVelEB1C; also plots figures itself...
     
     datas{ind} = data; %4,5,6 contains our vRot, int, PCA. store by index
 end
@@ -118,4 +120,4 @@ for j = 1:2 %run over intensity, PCA. These get a figure each. Normalize intensi
 end
 fig.PaperUnits = 'inches';
 fig.PaperPosition = [0 0 8 11.5];
-print(fig, strcat('/Users/loaner/Documents/imaging/Data_Dan/shi/plots/compare_intensity_PEG_PEN2_GE_', per), '-dpdf');
+print(fig, strcat('/Users/loaner/Documents/imaging/Data_Dan/shi/plots/compare_intensity_PEG_PEN2_GE', per, '_nWedge', num2str(nWedge)), '-dpdf');

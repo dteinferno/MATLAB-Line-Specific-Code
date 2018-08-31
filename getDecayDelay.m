@@ -1,4 +1,4 @@
-function [decays, delays] = getDecayDelay(dir, cond, l, delay)
+function taus = getDecayDelay(dir, cond, l, delay, nWedge)
 %Plots the decay of fluorescent activity when the fly stops moving and the
 %re-emergence of activity when the fly starts moving again. Fits an
 %exponential to the decay and sigmoidal to the re-emergence.
@@ -24,12 +24,18 @@ pers = { 'dark', 'OL', 'CL' };
 
 conds = {'RT', '30C'};
 
+taus = {containers.Map(pers, {[], [], []}) containers.Map(pers, {[], [], []})}; %{RT 30C}
+
 for condid = 1:2
 
     for per = 1:3
 
-        data = getDataShi(cond, pers{per}, 7, 0); %smooth fluorescence but not vel. Makes it somewhat less noisy
+        [DFs, data, flyinds] = getDataShi(cond, pers{per}, 7, 0, nWedge);
+        %smooth fluorescence but not vel. Makes it somewhat less noisy
+        %nWedges specifies the number of wedges we average over
 
+        maxs = max(DFs{condid}, [], 1);
+        
         tPts = data{6*condid-5};
         vR = abs( data{6*condid-4} );
         vF = abs( data{6*condid-3} );
@@ -37,6 +43,9 @@ for condid = 1:2
         mags = data{6*condid-1};
         dirs = data{6*condid};
         vDF = abs(getRates(dirs, tPts, 2*pi) ); %get rates
+        flyinds = flyinds{condid}
+
+        
 
         decays = [];
         delays = [];
@@ -46,32 +55,77 @@ for condid = 1:2
         vFdels = [];%magnitude of rate of change of direction of PVA
         magdecs = [];%magnitude of PVA
         magdels = [];
+        
+        prevind = 1;
+        
+        xvals1 = [0:l+pre1-1].*(tPts(6)-tPts(5)); %length of decays
 
-        for i = 3:length(vR)-(l-1)
+        for i = 3:length(vR)-l
+            
+            %if tPts(i) < tPts(i-1) || i == length(vR)-l %new trial; add taus from previous trial
+            if any(flyinds == i) || i == length(vR)-l
+                display('starting new fly')
+                s = size(decays);
+                if s(2) >= prevind %have added bouts of standing
+                    mdec = mean(decays(:, prevind:s(2)), 2); %mean intensity
+
+                    fdec = fit(xvals1', mdec, 'exp1');
+
+                    taus{condid}(pers{per}) = [taus{condid}(pers{per}); -fdec.b]; %rate constant
+
+                    prevind = s(2)+1;
+                end
+            end
+            
             %need continuous stationary stretch of length l starting at i
             if all(vR(i:i+(l-1)) <= threshR) && all(vF(i:i+(l-1)) <= threshF ) && ...
-                    all(vR(i-pre1:i-1) > threshR) && all(vF(i-pre1:i-1) > threshF ) 
+                    all(vR(i-pre1:i-1) > threshR) && all(vF(i-pre1:i-1) > threshF ) && ...
+                    tPts(i+(l-1)) > tPts(i-pre1)
+                
                 decays = [decays transpose( int(i-pre1:i+(l-1))/int(i-pre1) ) ]; %normalize to first data point
+                
+                %{
+                if method == 'mean'
+                    decays = [decays transpose( int(i-pre1:i+(l-1))/int(i-pre1) ) ]; %normalize to first data point
+                elseif method =='max'
+                    decays = [decays transpose( maxs(i-pre1:i+(l-1))/maxs(i-pre1) ) ]; %normalize to first data point
+                else
+                    display('method should be max or mean')
+                end
+                %}
+                
                 vFdecs = [vFdecs vDF(i-pre1:i+(l-1)) ]; %no normaliztion
                 magdecs = [magdecs transpose( mags(i-pre1:i+(l-1)) ) ];%/ mags(i-pre1) ]; %normalize
                 vdecs = [vdecs transpose( vR(i-pre1:i+(l-1)) ) ];
                 
                 j = l;
-                while vR(i+j) <= threshR && vF(i+j) <= threshF %find the end of the stationary stretch
+                while length(vR) >= i+j && vR(i+j) <= threshR && vF(i+j) <= threshF %find the end of the stationary stretch
                     j = j+1;
                 end
 
-                if length(vR) > i+j+(delay-2) %don't want to reach end of list
+                if length(vR) > i+j+(delay-1) %don't want to reach end of list
                     %display('adding delay')
                     %vR( i+j : i+j+(delay-1) )
                     %vF( i+j : i+j+(delay-1) )
                     
                     %want continuous activity
-                    if all( vR( i+j : i+j+(delay-1) ) > threshR ) && all( vF( i+j : i+j+(delay-1) ) > threshF )  
+                    if all( vR( i+j : i+j+(delay-1) ) > threshR ) && all( vF( i+j : i+j+(delay-1) ) > threshF ) && ...
+                            tPts(i+j+(delay-1)) > tPts(i)
                         %display('still adding delay')
+                        
                         delays = [delays transpose( int( i+j-pre2 : i+j+(delay-1) ) / int(i+j-pre2) )];
+                        %{
+                        if method == 'mean'
+                            delays = [delays transpose( int( i+j-pre2 : i+j+(delay-1) ) / int(i+j-pre2) )];
+                        elseif method == 'max'
+                            delays = [delays transpose( maxs( i+j-pre2 : i+j+(delay-1) ) / maxs(i+j-pre2) )];
+                        else
+                            display('method should be max or mean')
+                        end
+                        %}
+                        
                         vFdels = [vFdels vDF( i+j-pre2 : i+j+(delay-1) ) ];
-                        magdels = [magdels transpose( mags( i+j-pre2 : i+j+(delay-1) ))]% / mags(i+j-pre2) )];
+                        magdels = [magdels transpose( mags( i+j-pre2 : i+j+(delay-1) ))];% / mags(i+j-pre2) )];
                         vdels = [vdels transpose( vR( i+j-pre2 : i+j+(delay-1) ) ) ];
                     end
                     
@@ -79,15 +133,15 @@ for condid = 1:2
             end
         end
 
-        vdecs
-        decays
-        vFdecs
-        magdecs
+        %vdecs
+        %decays
+        %vFdecs
+        %magdecs
         
-        vdels
-        delays
-        vFdels
-        magdels
+        %vdels
+        %delays
+        %vFdels
+        %magdels
         
         %fit delay to sigmoidal function of form
         %f(x) = 1 + a / ( 1 + exp[-b(x-c)] )
@@ -114,7 +168,7 @@ for condid = 1:2
         mvFdel = mean(vFdels, 2);
         mmagdel = mean(magdels, 2);
         
-        newfig = figure('units','normalized','outerposition',[0 0 1 1])%, 'visible', 'off');
+        newfig = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off');
         
         fdec = fit(xvals1', mdec, 'exp1');
         [fdel, gofdel] = fit(xvals2', mdel, ft, 'problem', mdel(1));     
@@ -211,7 +265,7 @@ for condid = 1:2
         newfig.PaperPosition = [0 0 8 11.5];
         
         %dest = strcat( dir, 'decay_delay_', name, '_', pers(per), '_', conds{condid} )
-        dest = strcat(dir, 'decayDelay_', name, '_', conds{condid}, '_', pers{per});
+        dest = strcat(dir, 'decayDelay_', name, '_', conds{condid}, '_', pers{per}, '_', 'nWedge', num2str(nWedge));
         
         print(newfig, dest, '-dpdf');
 

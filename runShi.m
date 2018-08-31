@@ -20,11 +20,16 @@ for i = 1:length(dirs)-1;
         save(strcat(dir, 'cond'), 'cond');
     end
     
-    data = scatterVelEB1C(strcat(dir, 'intensities/'), cond, 'OL');
+    %jumpvel(dir, cond, 7)
     
-    %cor = correlationVel(strcat(dir, 'correlation/'), cond);
+    %[pres, posts] = persistance(dir, cond, 3);
     
-    %[decays, delays] = getDecayDelay(strcat(dir, 'decayDelay/'), cond, 3, 10);
+    %data = scatterVelEB1C(strcat(dir, 'intensities/'), cond, 'OL');
+    
+    %cor = correlationVel(strcat(dir, 'correlation/'), cond, 0);
+    %rhos = correlationPos(strcat(dir, 'correlation_pos/'), cond, 3);
+    
+    %[decays, delays] = getDecayDelay(strcat(dir, 'decayDelay/'), cond, 3, 10, 16); %run over nWEdges wedges
     %dir, cond, length of stretch that must be zero, length of stretch to
     %consider for re-emergence of fluorescence
     

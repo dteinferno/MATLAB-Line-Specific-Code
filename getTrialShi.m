@@ -1,4 +1,4 @@
-function [DF, data] = getTrialShi(cond, period, i, k, smoothF, smoothV)
+function [headings, DFs, data] = getTrialShi(cond, period, i, k, smoothF, smoothV, nWedge)
 %Given a container with data for a given experiment, as well as a period, flyID and
 %trialID of interest, returns DF with the raw imaging data (possibly
 %smoothened) as well as a cell 'data' containing tPts, vRot, vF, intensity,
@@ -11,7 +11,8 @@ function [DF, data] = getTrialShi(cond, period, i, k, smoothF, smoothV)
 
 
 data = { [] [] [] [] [] [] [] [] [] [] [] [] };
-
+DFs = {[] []};
+headings = {[] []};
 
 conds = {'All' 'All_30C'};
     
@@ -26,8 +27,13 @@ for j = 1:2; %iterate over conditions
     [tPts,darkPer, OLPer, CLPer, CWPer, CCWPer, DF, heading, headingPlt, vRot, vF, stripePos, stripePosPlt, stripeJumps]...
         = extractShiData(cond, i, conds{j}, ind, smoothF, smoothV); %get data
 
-    int = mean(DF,1); %use mean rather than sum since this actually gives a dF/F like value
-
+    %int = mean(DF,1); %use mean rather than sum since this actually gives a dF/F like value
+    DF(:, 1:10)
+    
+    int = mean( maxk(DF, nWedge, 1), 1); %specify how many wedges to calculate the mean over
+    
+    int(:, 1:10)
+    
     %getmagnitude of PVAs
     m = zeros(1, length(int));
     dirs = zeros(1, length(int));
@@ -62,6 +68,7 @@ for j = 1:2; %iterate over conditions
     data{6*j-1} = [data{6*j-1} m(per)];%magnitude of PVA
     data{6*j} = [data{6*j} dirs(per)];
     
-    DF = DF(:, per);
+    headings{j} = heading(per);
+    DFs{j} = DF(:, per);
 
 end

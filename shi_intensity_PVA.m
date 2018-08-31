@@ -3,6 +3,8 @@
 %plots the variation of each quantity with velocity for a given line for
 %both RT and 30C.
 
+nWedge = 1
+
 dirs = { '/Users/loaner/Documents/imaging/Data_Dan/shi/empty/',...
     '/Users/loaner/Documents/imaging/Data_Dan/shi/EPG/',...
     '/Users/loaner/Documents/imaging/Data_Dan/shi/GE/',...
@@ -50,7 +52,7 @@ for period = {'dark', 'CL', 'OL'}
                 
                 ind = 2*(i-1)+k;
                 
-                [DFs{ind, d}, datas{ind, d}] = getTrialShi(cond, per, i, k, 0, 0); %get data and store for later
+                [~, DFs{ind, d}, datas{ind, d}] = getTrialShi(cond, per, i, k, 0, 0, nWedge); %get data and store for later
             end
         end
     end
@@ -83,7 +85,9 @@ for period = {'dark', 'CL', 'OL'}
                     data = datas{ind, d};
                     vRotsRT = abs(data{2});
                     vRots30 = abs(data{2+6});
-                    DF = DFs{ind, d};
+
+                    DF = DFs{ind, d}{2}; %get 30C
+                    size(DF)
                     
                     selectRT = (a <= vRotsRT & vRotsRT <= b); %indicies corresponding to bin of interest
                     select30 = (a <= vRots30 & vRots30 <= b);
@@ -93,7 +97,7 @@ for period = {'dark', 'CL', 'OL'}
                         PVAs(ind, d) = mean(data{6+5}(select30)); %dont normalize PVA
                         DF = DF(:,select30);
                         [means, stds, ~, ~] = alignEB(DF, DF);
-                        [xs, HM] = FWHM(means, 'zero'); %get half max from zero baseline
+                        [xs, HM] = FWHM(means, 'min'); %get half max from baseline
                         FWHMs(ind, d) = xs{2}-xs{1};
                         
                     end
@@ -110,10 +114,11 @@ for period = {'dark', 'CL', 'OL'}
             figure(figs{i})
             subplot(length(vels)-1, 2, m)
             hold on
-            xlabs = ''
+            xlabs = '';
             val0 = plotdata{i}(:, 1);
             for d = 1:length(dirs)
                 vals = plotdata{i}(:, d);
+                vals
                 vals = vals(vals~=0); %zeros only if fewer samples or no standing still; real data does not give zero exactly
                 xs = linspace(-0.2, 0.2, length(vals)) + d;
                 scatter(xs', vals, 'b');
@@ -121,7 +126,7 @@ for period = {'dark', 'CL', 'OL'}
                 line([xs(1), xs(end)], [mean(vals)-std(vals), mean(vals)-std(vals)], 'Color', 'r', 'LineStyle', ':')
                 line([xs(1), xs(end)], [mean(vals)+std(vals), mean(vals)+std(vals)], 'Color', 'r', 'LineStyle', ':')
                 [r, p] = ttest2(vals, val0(val0 ~= 0), 'Tail', 'both', 'Vartype', 'unequal');
-                xlabs = strcat(xlabs, sprintf(' %.2f(%.2f):%.1e', mean(vals), std(vals), p))
+                xlabs = strcat(xlabs, sprintf(' %.2f(%.2f):%.1e', mean(vals), std(vals), p));
             end  
             xlabel('samples')
             if i == 1
@@ -148,27 +153,28 @@ for period = {'dark', 'CL', 'OL'}
     
     intfig.PaperUnits = 'inches';
     intfig.PaperPosition = [0 0 8 11.5];
-    print(intfig, strcat( '/Users/loaner/Documents/imaging/Data_Dan/shi/plots/intensity_scatterplots_', per ), '-dpdf');
+    print(intfig, strcat( '/Users/loaner/Documents/imaging/Data_Dan/shi/plots/intensity_scatterplots_',...
+        per,'_nWedge',num2str(nWedge)), '-dpdf');
     
     PVAfig.PaperUnits = 'inches';
     PVAfig.PaperPosition = [0 0 8 11.5];
-    print(PVAfig, strcat( '/Users/loaner/Documents/imaging/Data_Dan/shi/plots/PVA_scatterplots_', per ), '-dpdf');
+    print(PVAfig, strcat( '/Users/loaner/Documents/imaging/Data_Dan/shi/plots/PVA_scatterplots_', per), '-dpdf');
 
     FWHMfig.PaperUnits = 'inches';
     FWHMfig.PaperPosition = [0 0 8 11.5];
-    print(FWHMfig, strcat( '/Users/loaner/Documents/imaging/Data_Dan/shi/plots/FWHM_scatterplots_', per ), '-dpdf');
+    print(FWHMfig, strcat( '/Users/loaner/Documents/imaging/Data_Dan/shi/plots/FWHM_baseline_scatterplots_', per), '-dpdf');
     
     %% Plot change with velocity bin
     
     %%{
     for d = 1:length(dirs)
-        data = getDataShi(conds{d}, per, 0, 0); %don't smoothen
+        [~, DFs, data, flyinds] = getDataShi(conds{d}, per, 0, 0, nWedge); %don't smoothen
         
-        line_fig = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off')
-        xs = 1:length(vels)-1
+        line_fig = figure('units','normalized','outerposition',[0 0 1 1], 'visible', 'off');
+        xs = 1:length(vels)-1;
 
         plotdata = { {zeros(1, length(vels)-1) zeros(1, length(vels)-1)} {zeros(1, length(vels)-1) zeros(1, length(vels)-1)} }; %contains int/PVA and cold/hot
-        stddata = plotdata
+        stddata = plotdata;
         
         for i = 1:2 %hot vs cold
             for m = 1:length(vels)-1
@@ -229,7 +235,8 @@ for period = {'dark', 'CL', 'OL'}
         
         line_fig.PaperUnits = 'inches';
         line_fig.PaperPosition = [0 0 8 11.5];
-        print(line_fig, strcat( dirs{d}, '/int_PVA_profiles/int_PVA_profile_', names{d}, '_', per ), '-dpdf');
+        print(line_fig, strcat( dirs{d}, '/int_PVA_profiles/int_PVA_profile_', names{d},...
+            '_', per, '_', 'nWedge', num2str(nWedge) ), '-dpdf');
         
         %error
     end
